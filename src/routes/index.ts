@@ -1,14 +1,12 @@
 import * as express from "express";
-import { User, sequelize } from "../Model";
+import userRouter from "./user";
 
 const router = express.Router();
 
+
+router.use('/api/user', userRouter);
+
 router.get('/', (req, res, next) => {
-    sequelize.sync().then(() => {  
-        User.findAll().then(users => {
-            console.log('users', users);
-        });
-    });
     res.json("Hello, World");
 });
 
