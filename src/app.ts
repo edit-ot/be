@@ -3,7 +3,10 @@ import * as express from "express";
 import * as path from "path";
 import * as cookieParser from "cookie-parser";
 import * as logger from "morgan";
+import * as session from "express-session";
+
 import indexRouter from "./routes/index";
+import { SECRET } from "./server-config";
 // const indexRouter = require('./routes/index');
 
 const app = express();
@@ -16,6 +19,9 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(session({
+    secret: SECRET
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
@@ -35,6 +41,8 @@ app.use((err, req, res, next) => {
     // render the error page
     res.status(err.status || 500);
     res.json({
+        code: 500,
+        msg: 'Server Inner Error. ' + err.toString && err.toString(),
         err
     });
 });
