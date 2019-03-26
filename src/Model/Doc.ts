@@ -15,7 +15,7 @@ export class Doc extends Model<Doc> {
 
     @ForeignKey(() => User)
     @Column
-    owner: number;
+    owner: string;
 }
 
 // export class DocStatic {

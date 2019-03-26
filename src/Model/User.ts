@@ -1,10 +1,12 @@
-import { Table, Model, Column } from 'sequelize-typescript';
+import { Table, Model, Column, PrimaryKey, HasMany } from 'sequelize-typescript';
+import { Doc } from './Doc';
 
 @Table
 export class User extends Model<User> {
     @Column
     nickname: string;
 
+    @PrimaryKey
     @Column
     username: string;
 
@@ -13,6 +15,9 @@ export class User extends Model<User> {
 
     @Column
     avatar: string;
+
+    @HasMany(() => Doc)
+    docs: Doc[];
 
     toStatic(): UserStatic {
         const { nickname, username, avatar } = this;

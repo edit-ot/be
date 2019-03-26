@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "baseUrl": "./src",
-    "rootDir": "./src",
+    "baseUrl": "src",
+    "rootDir": "src",
     "outDir": "./dist",
     "module": "commonjs",
-    "target": "es2017",
+    "target": "es6",
     "lib": ["es6"],
     "moduleResolution": "node",
     "forceConsistentCasingInFileNames": true,

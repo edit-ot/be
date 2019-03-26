@@ -1,4 +1,4 @@
-import { UserStatic } from "Model";
+import { UserStatic } from "../Model";
 
 export interface MySessionContent {
     user: UserStatic

@@ -87,4 +87,15 @@ router.post('/register', (req, res) => {
     }
 });
 
+export const LoginMidWare = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req && req.session && req.session.user) {
+        next();
+    } else {
+        res.json({
+            code: 403,
+            msg: '请登录'
+        });
+    }
+}
+
 export default router;
