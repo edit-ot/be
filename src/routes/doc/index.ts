@@ -29,6 +29,38 @@ router.get('/', (req, res) => {
     })
 });
 
+router.get('/byId', (req, res) => {
+    const session = req.session as StdSession;
+    const { user } = session;
+    const { username } = user;
+    const { docId } = req.query;
+
+    if (docId) {
+        Doc.findOne({
+            where: { id: docId }
+        }).then(doc => {
+            if (doc) {
+                const list = doc.permission.split(',');
+                if ( // 权限
+                    doc.permission === '*' ||
+                    doc.owner === username ||
+                    list.includes(username)
+                ) {
+                    res.json({ code: 200, msg: 'ok', data: doc });
+                } else {
+                    res.json({ code: 403, msg: 'no permission' });
+                }
+            } else {
+                res.json({ code: 404 })
+            }
+        })
+    } else {
+        res.json({
+            code: 404
+        });
+    }
+})
+
 router.post('/create', (req, res, next) => {
     const session = req.session as StdSession;
     const { user } = session;
