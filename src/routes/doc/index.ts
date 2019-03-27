@@ -29,6 +29,54 @@ router.get('/', (req, res) => {
     })
 });
 
+router.post('/create', (req, res, next) => {
+    const session = req.session as StdSession;
+    const { user } = session;
+
+    const theNewDoc = new Doc({
+        title: '未命名文档',
+        content: '',
+        owner: user.username,
+        permission: ''
+    });
+
+    theNewDoc.save().then(doc => {
+        res.json({
+            code: 200,
+            msg: '创建成功',
+            data: doc
+        })
+    }).catch(next);
+});
+
+router.post('/delete', (req, res, next) => {
+    const session = req.session as StdSession;
+    const { user } = session;
+
+    Doc.findOne({
+        where: {
+            owner: user.username,
+            id: req.body.docId
+        }
+    }).then(doc => {
+        if (!doc) {
+            res.json({
+                code: 200,
+                data: null
+            });
+
+            return;
+        } else {
+            return doc.destroy().then(() => {
+                res.json({
+                    code: 200,
+                    data: doc
+                })
+            });
+        }
+    }).catch(next);
+})
+
 export default router;
 
 

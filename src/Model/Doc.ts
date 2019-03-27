@@ -1,4 +1,4 @@
-import { Table, Model, Column, ForeignKey } from 'sequelize-typescript';
+import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { User } from './User';
 
 
@@ -16,6 +16,15 @@ export class Doc extends Model<Doc> {
     @ForeignKey(() => User)
     @Column
     owner: string;
+    
+
+    @CreatedAt
+    @Column
+    createAt: Date;
+
+    @UpdatedAt
+    @Column
+    updateAt: Date;
 }
 
 // export class DocStatic {
