@@ -17,7 +17,6 @@ export class Doc extends Model<Doc> {
     @Column
     owner: string;
     
-
     @CreatedAt
     @Column
     createAt: Date;

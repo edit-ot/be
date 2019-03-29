@@ -2,9 +2,10 @@ import * as express from "express";
 import userRouter from "./user";
 import docRouter from "./doc";
 
-
 const router = express.Router();
 
+router.get('/api',
+    (req, res) => res.json('hello, world')); 
 
 router.use('/api/user', userRouter);
 

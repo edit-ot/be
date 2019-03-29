@@ -59,7 +59,7 @@ router.get('/byId', (req, res) => {
             code: 404
         });
     }
-})
+});
 
 router.post('/create', (req, res, next) => {
     const session = req.session as StdSession;
@@ -80,6 +80,28 @@ router.post('/create', (req, res, next) => {
         })
     }).catch(next);
 });
+
+router.post('/update', (req, res, next) => {
+    const session = req.session as StdSession;
+    const { user } = session;
+
+    Doc.findOne({
+        where: {
+            id: req.body.id
+        }
+    }).then(doc => {
+        if (doc && doc.owner === user.username) {
+            doc.title = req.body.title;
+            doc.save().then(() => {
+                res.json({ code: 200, data: doc, msg: 'updated' });
+            }).catch(next);
+        } else {
+            res.json({
+                code: 404
+            });
+        }
+    }).catch(next);
+})
 
 router.post('/delete', (req, res, next) => {
     const session = req.session as StdSession;
