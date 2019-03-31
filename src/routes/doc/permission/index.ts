@@ -7,9 +7,9 @@ const router = express.Router();
 
 // param 
 router.use('*', (req, res, next) => {
-    const { docId, username } = req.body;
+    const { docId } = req.body;
 
-    if (!docId || !username) {
+    if (!docId) {
         res.json({
             code: 403,
             msg: '参数不足'
@@ -46,6 +46,20 @@ router.use('*', (req, res, next) => {
             });
         }
     })
+});
+
+
+router.post('/toggle', (req, res, next) => {
+    const doc = req.body.doc as Doc;
+
+    doc.isPublic = !doc.isPublic;
+
+    doc.save().then(() => {
+        res.json({
+            code: 200, 
+            data: doc.toStatic()
+        })
+    }).catch(next);
 });
 
 // ENNN
