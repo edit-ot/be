@@ -1,8 +1,11 @@
 import * as express from "express";
 import { User } from "../../Model";
 import { StdSession } from "utils/StdSession";
+import { Sequelize } from "sequelize-typescript";
 
 // import * as md5 from "md5";
+
+const SECURITY_EXCLUDE = ['openid', 'id', 'pwd'];
 
 const router = express.Router();
 
@@ -97,5 +100,31 @@ export const LoginMidWare = (req: express.Request, res: express.Response, next: 
         });
     }
 }
+
+router.use('*', LoginMidWare);
+
+router.get('/search', (req, res, next) => {
+    if (req.query.keyword) {
+        User.findAll({
+            attributes: { exclude: SECURITY_EXCLUDE },
+            
+            where: {
+                username: {
+                    [Sequelize.Op.like]: '%' + req.query.keyword + '%'
+                }
+            },
+            
+        }).then(users => {
+            res.json({
+                code: 200,
+                data: users
+            });
+        }).catch(next);
+    } else {
+        res.json({
+            code: 403
+        });
+    }
+})
 
 export default router;

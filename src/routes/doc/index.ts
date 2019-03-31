@@ -2,6 +2,8 @@ import * as express from "express";
 import { LoginMidWare } from "../user";
 import { User, Doc } from "../../Model";
 import { StdSession } from "utils/StdSession";
+
+import PermissionRouter from "./permission";
 // import { User } from "../../Model";
 
 // import * as md5 from "md5";
@@ -24,10 +26,12 @@ router.get('/', (req, res) => {
         res.json({
             code: 200, 
             msg: 'ok', 
-            data: (user && user.docs) || []
+            data: (user && user.docs.map(d => d.toStatic())) || []
         });
     })
 });
+
+
 
 router.get('/byId', (req, res) => {
     const session = req.session as StdSession;
@@ -40,18 +44,22 @@ router.get('/byId', (req, res) => {
             where: { id: docId }
         }).then(doc => {
             if (doc) {
-                const list = doc.permission.split(',');
+                const p = doc.toPermissionObj();
                 if ( // 权限
                     doc.permission === '*' ||
                     doc.owner === username ||
-                    list.includes(username)
+                    p[username].r
                 ) {
-                    res.json({ code: 200, msg: 'ok', data: doc });
+                    res.json({
+                        code: 200,
+                        msg: 'ok',
+                        data: doc.toStatic()
+                    });
                 } else {
                     res.json({ code: 403, msg: 'no permission' });
                 }
             } else {
-                res.json({ code: 404 })
+                res.json({ code: 404, query: req.query });
             }
         })
     } else {
@@ -69,7 +77,8 @@ router.post('/create', (req, res, next) => {
         title: '未命名文档',
         content: '',
         owner: user.username,
-        permission: ''
+        permission: '',
+        isPublic: false
     });
 
     theNewDoc.save().then(doc => {
@@ -129,7 +138,9 @@ router.post('/delete', (req, res, next) => {
             });
         }
     }).catch(next);
-})
+});
+
+router.use('/permission', PermissionRouter);
 
 export default router;
 
