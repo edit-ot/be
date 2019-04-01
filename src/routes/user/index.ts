@@ -9,6 +9,22 @@ const SECURITY_EXCLUDE = ['openid', 'id', 'pwd'];
 
 const router = express.Router();
 
+router.get('/avatar/:username', (req, res) => {
+    const { username } = req.params;
+
+    User.findOne({
+        attributes: { include: ['avatar']},
+        where: { username: username }
+    }).then(user => {
+        if (!user) {
+            res.status(404);
+            res.json({ code: 404, msg: 'user not found' });
+        } else {
+            res.redirect(user.avatar);
+        }
+    })
+})
+
 router.get('/me', (req, res) => {
     if (req.session && req.session.user) {
         const session = req.session as StdSession;
