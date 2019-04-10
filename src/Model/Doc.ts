@@ -76,4 +76,29 @@ export class Doc extends Model<Doc> {
             pmap: this.toPermissionObj()
         }
     }
+
+
+    isOwner(username: string): boolean {
+        return username === this.owner;
+    }
+
+    canRead(username: string) {
+        const isOwner = this.isOwner(username);
+        if (isOwner) return true;
+
+        const p = this.toPermissionObj();
+        if (this.isPublic && p['*'] && p['*'].r) return true;
+
+        return p[username] && p[username].r;
+    }
+
+    canWrite(username: string) {
+        const isOwner = this.isOwner(username);
+        if (isOwner) return true;
+
+        const p = this.toPermissionObj();
+        if (this.isPublic && p['*'] && p['*'].w) return true;
+
+        return p[username] && p[username].w;
+    }
 }

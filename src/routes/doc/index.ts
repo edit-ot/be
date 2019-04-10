@@ -44,11 +44,8 @@ router.get('/byId', (req, res) => {
             where: { id: docId }
         }).then(doc => {
             if (doc) {
-                const p = doc.toPermissionObj();
                 if ( // 权限
-                    doc.permission === '*' ||
-                    doc.owner === username ||
-                    p[username].r
+                    doc.canRead(username)
                 ) {
                     res.json({
                         code: 200,
@@ -102,14 +99,21 @@ function CreateUpdateTask(
                 id: req.body.id
             }
         }).then(doc => {
-            if (doc && doc.owner === user.username) {
+            if (!doc) {
+                res.json({
+                    code: 404
+                });
+            } else if (
+                doc.canWrite(user.username)
+            ) {
                 todo(doc, req, res, next);
+
                 doc.save().then(() => {
                     res.json({ code: 200, data: doc, msg: 'updated' });
                 }).catch(next);
             } else {
                 res.json({
-                    code: 404
+                    code: 403
                 });
             }
         }).catch(next);
