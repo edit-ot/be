@@ -4,6 +4,7 @@ import { User, Doc } from "../../Model";
 import { StdSession } from "utils/StdSession";
 
 import PermissionRouter from "./permission";
+import { DocGroup } from "../../Model/DocGroup";
 // import { User } from "../../Model";
 
 // import * as md5 from "md5";
@@ -30,8 +31,6 @@ router.get('/', (req, res) => {
         });
     })
 });
-
-
 
 router.get('/byId', (req, res) => {
     const session = req.session as StdSession;
@@ -66,7 +65,7 @@ router.get('/byId', (req, res) => {
     }
 });
 
-router.post('/create', (req, res, next) => {
+const CreateDoc = (req: express.Request): Doc => {
     const session = req.session as StdSession;
     const { user } = session;
 
@@ -78,14 +77,31 @@ router.post('/create', (req, res, next) => {
         isPublic: false
     });
 
-    theNewDoc.save().then(doc => {
+    return theNewDoc;
+}
+
+router.post('/create', (req, res, next) => {
+    const doc = CreateDoc(req);
+
+    doc.save().then(() => {
         res.json({
             code: 200,
-            msg: '创建成功',
-            data: doc
-        })
+            msg: '创建成功'
+        });
     }).catch(next);
 });
+
+router.post('/create-for-gorup', (req, res, next) => {
+    const doc = CreateDoc(req);
+
+    doc.save().then(() => {
+        const dg = DocGroup.link(doc.id, req.body.groupId);
+        dg.save().then(() => {
+            res.json({ code: 200 });
+        }).catch(next);
+    }).catch(next);
+});
+
 
 function CreateUpdateTask(
     todo: (doc: Doc, ...args: Parameters<express.RequestHandler>) => void

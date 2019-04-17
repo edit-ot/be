@@ -5,11 +5,12 @@
   "scripts": {
     "watch": "tsc -w",
     "start": "node ./dist/bin/www",
-    "service": "nodemon --watch src/**/* -e ts,tsx --exec='node dist/bin/www' --delay 2",
+    "service": "nodemon --watch dist/**/* --exec='node dist/bin/www' --delay 1",
     "cp": "copyfiles -f src/public/**/*.png dist/public"
   },
   "dependencies": {
     "@types/sequelize": "^4.27.39",
+    "@types/uuid": "^3.4.4",
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.9",
     "ejs": "~2.5.7",
@@ -22,7 +23,8 @@
     "qr-image": "^3.2.0",
     "reflect-metadata": "^0.1.13",
     "sequelize": "^4.43.0",
-    "sequelize-typescript": "^0.6.7"
+    "sequelize-typescript": "^0.6.7",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.1",

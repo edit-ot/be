@@ -1,5 +1,7 @@
-import { Table, Model, Column, PrimaryKey, HasMany } from 'sequelize-typescript';
+import { Table, Model, Column, PrimaryKey, HasMany, BelongsToMany } from 'sequelize-typescript';
 import { Doc } from './Doc';
+import { Group } from './Group';
+import { UserGroup } from './UserGroup';
 
 @Table
 export class User extends Model<User> {
@@ -18,6 +20,9 @@ export class User extends Model<User> {
 
     @HasMany(() => Doc)
     docs: Doc[];
+
+    @BelongsToMany(() => Group, () => UserGroup)
+    groups: Group[];
 
     toStatic(): UserStatic {
         const { nickname, username, avatar } = this;

@@ -1,6 +1,10 @@
 import { Sequelize } from 'sequelize-typescript';
 import { User } from "./User";
 import { Doc } from './Doc';
+import { Group } from "./Group";
+import { DocGroup } from './DocGroup';
+import { UserGroup } from './UserGroup';
+
 
 export const sequelize = new Sequelize({
     database: 'edit-ot',
@@ -9,9 +13,10 @@ export const sequelize = new Sequelize({
     password: 'root'
 });
 
-
-
 sequelize.addModels([
     User,
-    Doc
+    Doc,
+    Group,
+    DocGroup,
+    UserGroup
 ]);

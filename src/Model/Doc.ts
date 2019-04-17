@@ -1,5 +1,7 @@
-import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt, BelongsToMany } from 'sequelize-typescript';
 import { User } from './User';
+import { Group } from './Group';
+import { DocGroup } from './DocGroup';
 
 export type RWDescriptor = {
     r: boolean,
@@ -35,6 +37,9 @@ export class Doc extends Model<Doc> {
     @UpdatedAt
     @Column
     updateAt: Date;
+
+    @BelongsToMany(() => Group, () => DocGroup)
+    groups: Group[];
 
     toPermissionObj(): UserPermissionMap {
         if (!this.permission) return {};
