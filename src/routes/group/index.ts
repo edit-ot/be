@@ -5,6 +5,8 @@ import { StdSession } from "utils/StdSession";
 import { CreateGroupUpdateTask } from "./group-util";
 import { User, Doc } from "../../Model";
 import { DocGroup } from "../../Model/DocGroup";
+import { RWDescriptor, pmapToStr } from "../../utils/RWDescriptor";
+import { UserGroup } from "../../Model/UserGroup";
 
 const router = express.Router();
 
@@ -25,16 +27,37 @@ router.get('/', (req, res) => {
 
 router.get('/byId', (req, res) => {
     const { user } = req.session as StdSession;
+    const { groupId } = req.query;
+
+    const groupInclude = [{
+        model: Doc
+    }, {
+        model: User,
+        as: 'users' 
+    }, {
+        model: User,
+        as: 'ownerInfo'
+    }]
 
     Group.findOne({
-        where: { groupId: req.query.groupId, owner: user.username },
-        include: [{
-            model: Doc
-        }, {
-            model: User
-        }]
+        where: { groupId, owner: user.username },
+        include: groupInclude
     }).then(group => {
-        res.json({ code: 200, data: group || null });
+        if (!group) {
+            UserGroup.findOne({
+                where: { groupId, username: user.username },
+                include: [{ model: Group, include: groupInclude }]
+            }).then(ug => {
+                if (!ug) {
+                    res.json({ code: 404 })
+                } else {
+                    res.json({ code: 200, data: ug.group });
+                }
+            })
+        } else {
+            res.json({ code: 200, data: group.toStatic() });
+        }
+        
     })
 })
 
@@ -44,7 +67,8 @@ router.get('/joined', (req, res) => {
     User.findOne({
         where: { username: user.username },
         include: [{
-            model: Group
+            model: Group,
+            as: 'groups'
         }]
     }).then(user => {
         if (!user) {
@@ -143,7 +167,41 @@ router.post('/', (req, res) => {
     });
 });
 
+router.post('/set-permission', (req, res) => {
+    const { user } = req.session as StdSession;
+    const { groupId, username, set } = req.body;
+    
+    Group.findOne({ where: { groupId } }).then(async g => {
+        if (!g) {
+            res.json({ code: 404 })
+        } else if (g.canWrite(user.username)) {
+            const { pmap } = g.toStatic();
 
+            if (set === 'r' || set === 'rw') {
+                if (!pmap[username]) {
+                    const up = UserGroup.link(username, groupId, set);
+                    await up.save();
+                }
+
+                pmap[username] = new RWDescriptor(set);
+            } else {
+                if (pmap[username]) {
+                    await UserGroup.unlink(username, groupId);
+                }
+
+                delete pmap[username];
+            }
+
+            g.permission = pmapToStr(pmap);
+
+            g.save().then(() => {
+                res.json({ code: 200, data: true });
+            })
+        } else {
+            res.json({ code: 403 });
+        }
+    })
+})
 
 
 router.post('/name', CreateGroupUpdateTask((group, req, res) => {

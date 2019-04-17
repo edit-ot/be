@@ -1,4 +1,4 @@
-import { Table, Model, Column, ForeignKey, IsUUID } from 'sequelize-typescript';
+import { Table, Model, Column, ForeignKey, IsUUID, HasOne, BelongsTo } from 'sequelize-typescript';
 
 import { Group } from './Group';
 import { User } from './User';
@@ -23,6 +23,25 @@ export class UserGroup extends Model<UserGroup> {
 
     @Column
     permission: string;
+
+    @BelongsTo(() => Group)
+    group: Group;
+
+    static link(username: string, groupId: string, permission: string) {
+        const up = new UserGroup();
+        up.username = username;
+        up.groupId = groupId;
+        up.permission = permission;
+
+        return up;
+    }
+
+    static unlink(username: string, groupId: string) {
+        return UserGroup.findOne({ where: { username, groupId } }).then(up => {
+            if (up) return up.destroy();
+            else return Promise.resolve(null);
+        })
+    }
 
     // static ofGroup(groupId: string) {
     //     return UserGroup.findAll({

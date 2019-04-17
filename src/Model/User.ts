@@ -24,6 +24,9 @@ export class User extends Model<User> {
     @BelongsToMany(() => Group, () => UserGroup)
     groups: Group[];
 
+    @HasMany(() => Group, 'owner')
+    ownGroups: Group[];
+
     toStatic(): UserStatic {
         const { nickname, username, avatar } = this;
         return {

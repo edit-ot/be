@@ -5,6 +5,7 @@ import { StdSession } from "utils/StdSession";
 
 import PermissionRouter from "./permission";
 import { DocGroup } from "../../Model/DocGroup";
+import { Group } from "../../Model/Group";
 // import { User } from "../../Model";
 
 // import * as md5 from "md5";
@@ -40,15 +41,20 @@ router.get('/byId', (req, res) => {
 
     if (docId) {
         Doc.findOne({
-            where: { id: docId }
+            where: { id: docId },
+            include: [{ model: Group, include: [{ model: Doc }] }]
         }).then(doc => {
             if (doc) {
+                const fromGroup = doc.groups.some(g => {
+                    return g.canRead(user.username)
+                });
+
                 if ( // 权限
-                    doc.canRead(username)
+                    doc.canRead(username) || fromGroup
                 ) {
                     res.json({
                         code: 200,
-                        msg: 'ok',
+                        msg: 'ok' + (fromGroup ? ' from group permission' : ''),
                         data: doc.toStatic()
                     });
                 } else {
