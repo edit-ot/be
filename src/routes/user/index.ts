@@ -78,6 +78,12 @@ router.post('/login', (req, res) => {
     }
 });
 
+router.get('/logout', (req, res) => {
+    const session = req.session as StdSession;
+    delete session.user;
+    res.json({ code: 200 });
+});
+
 router.post('/register', (req, res) => {
     const { username, pwd, pwd2 } = req.body;
 
