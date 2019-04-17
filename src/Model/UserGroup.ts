@@ -1,4 +1,4 @@
-import { Table, Model, Column, ForeignKey, IsUUID, HasOne, BelongsTo } from 'sequelize-typescript';
+import { Table, Model, Column, ForeignKey, IsUUID, BelongsTo } from 'sequelize-typescript';
 
 import { Group } from './Group';
 import { User } from './User';
