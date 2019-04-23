@@ -1,3 +1,4 @@
+import * as md5 from "md5";
 import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt, BelongsToMany } from 'sequelize-typescript';
 import { User } from './User';
 import { Group } from './Group';
@@ -55,6 +56,23 @@ export class Doc extends Model<Doc> {
             return acc; 
         }, {} as UserPermissionMap);
     }
+
+    toRoomName() {
+        return `${ this.title }-${ this.id }`;
+    }
+
+    contentHash() {
+        return md5(this.content || '');
+    }
+
+    // someOneCanWrite(username: string): Promise<boolean> {
+    //     if (this.canWrite(username)) {
+    //         return Promise.resolve(true);
+    //     } else {
+
+
+    //     }
+    // }
 
     pmapToStr(p: UserPermissionMap) {
         return Object.keys(p).map(username => {

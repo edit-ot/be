@@ -1,7 +1,8 @@
-import { UserStatic } from "../Model";
+import { UserStatic, User } from "../Model";
 
 export interface MySessionContent {
-    user: UserStatic
+    user: UserStatic,
+    userInfo: User
 }
 
 interface SessionData extends MySessionContent {

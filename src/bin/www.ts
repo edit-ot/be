@@ -4,14 +4,19 @@ import * as http from "http";
 import app from "../app";
 import { normalizePort } from "../utils";
 import { sequelize } from "../Model";
+import { ATTACH_IO } from "../io";
 
 const server = http.createServer(app);
 const port = normalizePort(process.env.PORT || '5555');
 app.set('port', port);
 
 console.log('Sequelize Syncing ...');
+
 sequelize.sync().then(res => {
     console.log('Sequelize Sync Finish.');
+
+    ATTACH_IO(server);
+
     server.listen(port);
 });
 

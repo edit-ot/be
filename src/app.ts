@@ -3,11 +3,13 @@ import * as express from "express";
 import * as path from "path";
 import * as cookieParser from "cookie-parser";
 import * as logger from "morgan";
-import * as session from "express-session";
+import * as CreateSession from "express-session";
 
 import indexRouter from "./routes/index";
 import { SECRET } from "./server-config";
 // const indexRouter = require('./routes/index');
+
+// import * as sharedSession from "express-socket.io-session";
 
 const app = express();
 
@@ -19,9 +21,12 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(session({
+
+export const session = CreateSession({
     secret: SECRET
-}));
+});
+app.use(session);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);

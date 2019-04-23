@@ -153,7 +153,7 @@ router.post('/save', CreateUpdateTask((doc, req) => {
         doc.title = req.body.title
     }
 
-    if (doc.content) {
+    if (req.body.content) {
         doc.content = req.body.content;
     }
 }))
