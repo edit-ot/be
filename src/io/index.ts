@@ -4,7 +4,7 @@ import { session } from "../app";
 import { StdSession } from "utils/StdSession";
 import { User, Doc } from "../Model";
 import { Delta } from "edit-ot-quill-delta";
-import { DocPool } from "./DocPool";
+import { DocPool, UserComment } from "./DocPool";
 
 const docPool = new DocPool();
 
@@ -47,7 +47,6 @@ docIo.use((socket, next) => {
     const { docId } = socket.handshake.query;
 
     Doc.findOne({
-        attributes: { exclude: ['openid', 'id', 'pwd'] },
         where: { id: docId }
     }).then(doc => {
         if (!doc) {
@@ -81,7 +80,8 @@ docIo.on('connect', socket => {
         // 通知
         socket.emit('i-logined', {
             userInfo, users, 
-            contentHash: doc.contentHash()
+            contentHash: doc.contentHash(),
+            doc: docPool.findOneStatic(doc.id)
         });
 
         // 通知
@@ -98,6 +98,46 @@ docIo.on('connect', socket => {
         });
     });
 
+    socket.on('add-user-comment', data => {
+        console.log('on add-user-comment', data);
+
+        const comment = data.comment as UserComment;
+        const line = data.line as number;
+
+        const target = docPool.findOne(doc.id);
+        const { docComments } = target;
+
+        const idx = docComments.findIndex(d => d.line === line);
+
+        if (idx === -1) {
+            docComments.push({
+                line, 
+                comments: [comment]
+            });
+        } else {
+            docComments[idx].comments.push(comment);
+        }
+
+        docIoRoom.emit('add-user-comment', data);
+    });
+
+    socket.on('remove-doc-comments', line => {
+        const target = docPool.findOne(doc.id);
+        if (!target) return console.log('remove-doc-comments not found');
+
+        const { docComments } = target;
+        const idx = docComments.findIndex(d => d.line === line);
+        if (idx === -1) return;
+        docComments.splice(idx, 1);
+
+        docIoRoom.emit('remove-doc-comments', line);
+    })
+
+    socket.on('get-docComments', docId => {
+        console.log('get-docComments', docId, Object.keys(docPool.pool));
+        const target = docPool.findOne(docId);
+        socket.emit('reveive-docComments', target.docComments);
+    });
 
     socket.on('updateContents', async data => {
         console.log('!! updateContents', user.username);

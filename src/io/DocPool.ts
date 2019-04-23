@@ -1,7 +1,7 @@
 import * as socketio from "socket.io";
 import { EventEmitter } from "events";
 import { Delta } from "edit-ot-quill-delta";
-import { User, Doc } from "../Model";
+import { User, Doc, UserStatic } from "../Model";
 import { StdSession } from "utils/StdSession";
 import md5 = require("md5");
 
@@ -10,10 +10,22 @@ export type UserDelta = {
     delta: Delta
 }
 
+export type UserComment = {
+    user: UserStatic,
+    text: string,
+    createAt: number
+}
+
+export class DocComment {
+    line: number;
+    comments: UserComment[];
+}
+
 export type DocPoolStatic = {
     [docId: string]: {
         now: Delta,
         seq: UserDelta[],
+        docComments: DocComment[],
         docRoom: socketio.Namespace,
         patchTask: NodeJS.Timeout
     }
@@ -27,6 +39,7 @@ export class DocPool extends EventEmitter {
     pool: DocPoolStatic = {};
 
     initRoom(doc: Doc, docRoom: socketio.Namespace) {
+        console.log('initRoom', doc.id);
         if (this.pool[doc.id]) {
             return null;
         } else {
@@ -37,6 +50,7 @@ export class DocPool extends EventEmitter {
                 now: nowDelta,
                 seq: [],
                 docRoom,
+                docComments: [],
                 patchTask: setInterval(() => {
                     this.flush(doc.id);
                 }, 3000)
@@ -47,7 +61,20 @@ export class DocPool extends EventEmitter {
     }
 
     findOne(docId: number | string) {
-        return this.pool[docId];
+        return this.pool[docId] || null;
+    }
+
+    findOneStatic(docId: number | string) {
+        const one = this.findOne(docId);
+
+        if (one) {
+            return {
+                now: one.now,
+                docComments: one.docComments
+            }
+        } else {
+            return null;
+        }
     }
 
     addToSeqFor(docId: number | string, user: User, delta: Delta) {
