@@ -3,7 +3,9 @@ import { EventEmitter } from "events";
 import { Delta } from "edit-ot-quill-delta";
 import { User, Doc, UserStatic } from "../Model";
 import { StdSession } from "utils/StdSession";
-import md5 = require("md5");
+import * as md5 from "md5";
+import * as JSONStringify from "fast-json-stable-stringify"
+
 
 export type UserDelta = {
     user: User,
@@ -44,7 +46,7 @@ export class DocPool extends EventEmitter {
             return null;
         } else {
             const nowDelta = doc.content ?
-                new Delta(JSON.parse(doc.content)) : new Delta();
+                new Delta(JSON.parse(doc.content)) : new Delta().insert('\n');
             
             this.pool[doc.id] = {
                 now: nowDelta,
@@ -94,7 +96,7 @@ export class DocPool extends EventEmitter {
             doc.seq = [];
 
             this.update(docId, 'exclude', [fir.user], fir.delta,
-                md5(JSON.stringify(doc.now)));
+                md5(JSONStringify(doc.now)));
         } else {
             const [fir, sec] = doc.seq;
 
@@ -108,7 +110,7 @@ export class DocPool extends EventEmitter {
             
             // Update 
             const nextNow = doc.now.compose(fir.delta).compose(firShouldUpdate);
-            const nextHash = md5(JSON.stringify(nextNow));
+            const nextHash = md5(JSONStringify(nextNow));
             doc.now = nextNow;
             
 

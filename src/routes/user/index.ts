@@ -147,6 +147,30 @@ router.get('/search', (req, res, next) => {
             code: 403
         });
     }
+});
+
+router.post('/update', (req, res, next) => {
+    const { user } = req.session as StdSession;
+
+    User.findOne({ where: { username: user.username } }).then($user => {
+        if ($user) {
+            const keys = Object.keys(req.body);
+            keys.forEach(key => {
+                $user[key] = req.body[key];               
+            });
+            $user.save().then(() => {
+                delete $user.pwd;
+                req.session && (
+                    req.session.user = $user.toStatic()
+                );
+                res.json({ code: 200 });
+            })
+        } else {
+            res.json({ code: 404 });
+        }
+    });
+
+    
 })
 
 export default router;

@@ -139,6 +139,19 @@ docIo.on('connect', socket => {
         socket.emit('reveive-docComments', target.docComments);
     });
 
+    socket.on('change-title', data => {
+        const { title } = data;
+        doc.title = title;
+        doc.save().then(() => {
+            docIoRoom.emit('owner-change-title', title);
+        })
+    });
+
+    socket.on('say-hello', user => {
+        console.log('say-hello', user);
+        docIoRoom.emit('say-hello', user);
+    })
+
     socket.on('updateContents', async data => {
         console.log('!! updateContents', user.username);
 

@@ -18,6 +18,9 @@ export class User extends Model<User> {
     @Column
     avatar: string;
 
+    @Column
+    intro: string;
+
     @HasMany(() => Doc)
     docs: Doc[];
 
@@ -28,9 +31,9 @@ export class User extends Model<User> {
     ownGroups: Group[];
 
     toStatic(): UserStatic {
-        const { nickname, username, avatar } = this;
+        const { nickname, username, avatar, intro } = this;
         return {
-            nickname, username, avatar
+            nickname, username, avatar, intro
         }
     }
 }
@@ -39,5 +42,6 @@ export class UserStatic {
     nickname: string;
     username: string;
     avatar: string;
+    intro: string;
 }
 

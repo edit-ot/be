@@ -1,5 +1,5 @@
 import * as md5 from "md5";
-import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt, BelongsToMany } from 'sequelize-typescript';
+import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt, BelongsToMany, DataType } from 'sequelize-typescript';
 import { User } from './User';
 import { Group } from './Group';
 import { DocGroup } from './DocGroup';
@@ -18,7 +18,7 @@ export class Doc extends Model<Doc> {
     @Column
     title: string;
 
-    @Column
+    @Column(DataType.TEXT('long'))
     content: string;
 
     @Column
