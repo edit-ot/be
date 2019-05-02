@@ -2,6 +2,8 @@ import { Table, Model, Column, PrimaryKey, HasMany, BelongsToMany } from 'sequel
 import { Doc } from './Doc';
 import { Group } from './Group';
 import { UserGroup } from './UserGroup';
+import { File } from './File';
+import { UserPunch } from './UserPunch';
 
 @Table
 export class User extends Model<User> {
@@ -24,8 +26,14 @@ export class User extends Model<User> {
     @HasMany(() => Doc)
     docs: Doc[];
 
+    @HasMany(() => File)
+    files: Doc[];
+
     @BelongsToMany(() => Group, () => UserGroup)
     groups: Group[];
+
+    @BelongsToMany(() => Group, () => UserPunch)
+    punchGroups: Group[];
 
     @HasMany(() => Group, 'owner')
     ownGroups: Group[];

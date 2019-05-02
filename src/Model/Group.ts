@@ -42,6 +42,7 @@ export class Group extends Model<Group> {
     @Column
     permission: string;
 
+    
     // 所有者
     @ForeignKey(() => User)
     @Column
@@ -49,6 +50,13 @@ export class Group extends Model<Group> {
 
     @BelongsTo(() => User, 'owner')
     ownerInfo: User
+
+    @Column(DataType.TEXT('long'))
+    calendar: string;
+
+    @Column(DataType.TEXT('long'))
+    card: string;
+    
 
     static findAllWithOwner(owner: string) {
         return Group.findAll({

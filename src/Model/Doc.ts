@@ -106,12 +106,18 @@ export class Doc extends Model<Doc> {
     }
 
     canRead(username: string) {
+        // 判断传入的用户名是否是 owner
         const isOwner = this.isOwner(username);
         if (isOwner) return true;
 
+        // this.toPermissionObj 会返回 this 的权限定义
+        // 其类型为 UserPermissionMap 
         const p = this.toPermissionObj();
+
+        // 如果文档公共且 p 中存在 * 且其权限定义含 r 
         if (this.isPublic && p['*'] && p['*'].r) return true;
 
+        // 否则直接返回权限定义
         return p[username] && p[username].r;
     }
 

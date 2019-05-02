@@ -6,10 +6,6 @@ import { User } from './User';
 
 @Table
 export class UserGroup extends Model<UserGroup> {
-    // 名称
-    @Column
-    groupName: string;
-
     // doc id
     @ForeignKey(() => User)
     @Column

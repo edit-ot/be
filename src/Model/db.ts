@@ -4,6 +4,8 @@ import { Doc } from './Doc';
 import { Group } from "./Group";
 import { DocGroup } from './DocGroup';
 import { UserGroup } from './UserGroup';
+import { File } from './File';
+import { UserPunch } from './UserPunch';
 
 
 export const sequelize = new Sequelize({
@@ -18,5 +20,8 @@ sequelize.addModels([
     Doc,
     Group,
     DocGroup,
-    UserGroup
+    UserGroup,
+    File,
+    
+    UserPunch
 ]);
