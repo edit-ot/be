@@ -1,7 +1,11 @@
 import * as express from "express";
+import * as multer from "multer";
 import { User } from "../../Model";
 import { StdSession } from "utils/StdSession";
 import { Sequelize } from "sequelize-typescript";
+import { AVATAR_BASE } from "../../config";
+import { File } from "../../Model/File";
+
 
 // import * as md5 from "md5";
 
@@ -169,8 +173,40 @@ router.post('/update', (req, res, next) => {
             res.json({ code: 404 });
         }
     });
+});
 
-    
+const upload = multer({
+    dest: AVATAR_BASE
+});
+
+router.post('/avatar', upload.single('file'), (req, res, next) => {
+    const { user } = req.session as StdSession;
+    const url = `/user-avatar/${ req.file.filename }`;
+
+    // Set Session
+    req.session && (
+        req.session.user = {
+            ...req.session.user, 
+            avatar: url
+        }
+    );
+
+    User.findOne({ where: { username: user.username } }).then(user => {
+        if (!user) return;
+        user.avatar = url;
+
+        user.save().then(() => {
+            res.json({ code: 200 });
+        });
+
+        const file = new File();
+        file.fileId = req.file.filename;
+        file.URL = url;
+        file.owner = user.username;
+        file.save();
+    });
+
+    console.log('!!!!! req.file', req.file);
 })
 
 export default router;

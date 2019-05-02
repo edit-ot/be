@@ -6,14 +6,10 @@ import { DocGroup } from './DocGroup';
 import { UserGroup } from './UserGroup';
 import { File } from './File';
 import { UserPunch } from './UserPunch';
+import { DB_CONFIG } from '../config';
 
 
-export const sequelize = new Sequelize({
-    database: 'edit-ot',
-    dialect: 'mysql',
-    username: 'root',
-    password: 'root'
-});
+export const sequelize = new Sequelize(DB_CONFIG);
 
 sequelize.addModels([
     User,

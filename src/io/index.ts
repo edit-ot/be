@@ -73,7 +73,10 @@ docIo.on('connect', socket => {
     docPool.initRoom(doc, docIoRoom);
        
     docIoRoom.clients((err: any, list: string[]) => {
-        const users: User[] = list.map(sid =>
+        console.log('docIoRoom', list);
+        const users: User[] = list.filter(sid => {
+            return docIo.connected[sid].connected;
+        }).map(sid =>
             // @ts-ignore
             docIo.connected[sid].handshake.session.userInfo);
         
