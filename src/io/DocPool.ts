@@ -23,13 +23,15 @@ export class DocComment {
     comments: UserComment[];
 }
 
+// 协作空间池
 export type DocPoolStatic = {
+    // 以自定义的 docId 标识协助空间
     [docId: string]: {
-        now: Delta,
-        seq: UserDelta[],
-        docComments: DocComment[],
-        docRoom: socketio.Namespace,
-        patchTask: NodeJS.Timeout
+        now: Delta,                  // 当前文档内容
+        seq: UserDelta[],            // 任务队列
+        docComments: DocComment[],   // 用户评论
+        docRoom: socketio.Namespace, // 用户列表
+        patchTask: NodeJS.Timeout    // 定时器任务
     }
 }
 
