@@ -6,7 +6,12 @@ import { StdSession } from "utils/StdSession";
 import * as md5 from "md5";
 import * as JSONStringify from "fast-json-stable-stringify"
 
-
+export type Patcher = (
+    type: 'exclude' | 'include',
+    userList: User[],
+    delta: Delta,
+    hash: string
+) => void;
 
 export type UserComment = {
     user: UserStatic,
@@ -14,30 +19,79 @@ export type UserComment = {
     createAt: number
 }
 
-export type DocInfo = {
-    now: Delta, 
+export class SharedDoc {
+    now: Delta;
     zoneComments: {
         line: number;
         comments: UserComment[];
-    }[],
+    }[] = [];
+
+    seq: {
+        user: User,
+        delta: Delta
+    }[] = [];
+
+    constructor(sharedDoc: Delta) {
+        this.now = sharedDoc;
+    }
+
+    pushSeq(user: User, delta: Delta) {
+        this.seq.push({
+            user,
+            delta
+        });
+    }
+
+    flushSeq = (patcher: Patcher) => {
+        if (this.seq.length === 0) {
+            return;
+        } else if (this.seq.length === 1) {
+            const [fir] = this.seq;
+            this.now = this.now.compose(fir.delta);
+            this.seq = [];
+
+            patcher(
+                'exclude',
+                [fir.user],
+                fir.delta,
+                md5(JSONStringify(this.now))
+            );
+        } else {
+            const [fir, sec] = this.seq;
+
+            console.log('fir', fir.user.username, fir.delta);
+            console.log('sec', sec.user.username, sec.delta);
+
+            const firShouldUpdate = fir.delta.transform(sec.delta, true);
+            console.log('firShouldUpdate', firShouldUpdate);
+
+            const secShouldUpdate = sec.delta.transform(fir.delta, false);
+            console.log('secShouldUpdate', secShouldUpdate);
+            
+            // Update 
+            const nextNow = this.now.compose(fir.delta).compose(firShouldUpdate);
+            const nextHash = md5(JSONStringify(nextNow));
+            this.now = nextNow;
+            
+            patcher('include', [fir.user], firShouldUpdate, nextHash);
+            patcher('include', [sec.user], secShouldUpdate, nextHash);
+
+            this.seq = this.seq.slice(2);
+            patcher('exclude', [fir.user, sec.user], fir.delta.compose(sec.delta), nextHash);
+        }
+    }
 }
 
 // 协作空间池
 export type ZonePool = {
     // 以自定义的 zone id 标识协助空间
     [zoneId: string]: {
-        seq: {
-            user: User,
-            delta: Delta,
-            for: string // subDocId
-        }[],
-
         docMap: {
-            [subDocId: string]: DocInfo
+            [subDocId: string]: SharedDoc
         },
-
         
         ioRoom: socketio.Namespace,
+
         patchTask: NodeJS.Timeout
     }
 }
@@ -61,7 +115,7 @@ export class CoZonePool extends EventEmitter {
             ioRoom,
             zoneComments: [],
             patchTask: setInterval(() => {
-                this.flush(zoneId);
+                this.tickFor(zoneId);
             }, 3000)
         };
 
@@ -69,79 +123,39 @@ export class CoZonePool extends EventEmitter {
         //     new Delta(JSON.parse(doc.content)) : new Delta().insert('\n');
     }
 
-    setSubContent(zoneId: string, subDocId: string, subContent: Delta) {
-        if (!this.pool[zoneId]) {
-            return console.warn('setSubContent zoneId not found:', zoneId);
-        } else {
-            this.pool[zoneId][subDocId] = subContent;
-        }
+    addSeqFor(zoneId: string, subDocId: string, user: User, delta: Delta) {
+        const doc = this.pool[zoneId].docMap[subDocId];
+        doc.pushSeq(user, delta);
 
         return this;
     }
+
+    createSubDoc(zoneId: string, subDocId: string, initDelta: Delta) {
+        const doc = new SharedDoc(initDelta);
+        this.pool[zoneId].docMap[subDocId] = doc;
+
+        return doc;
+    }    
 
     findOne(zoneId: string) {
         return this.pool[zoneId] || null;
     }
 
-    findOneStatic(zoneId: string) {
-        const one = this.findOne(zoneId);
+    tickFor(zoneId: string) {
+        if (!this.pool[zoneId]) return console.log(' - tickFor zoneId Not Found');
+        const { docMap } = this.pool[zoneId];
 
-        if (one) {
-            return {
-                now: one.now,
-                docComments: one.docComments
-            }
-        } else {
-            return null;
-        }
-    }
+        Object.keys(docMap).forEach(key => {
+            const doc = docMap[key];
 
-    addToSeqFor(docId: number | string, user: User, delta: Delta) {
-        const { seq } = this.findOne(docId);
-        seq.push({ user, delta });
-    }
-
-    flush = (docId: number | string) => {
-        const doc = this.findOne(docId);
-        console.log('To Flush', doc.now);
-
-        if (doc.seq.length === 0) {
-            return;
-        } else if (doc.seq.length === 1) {
-            const [fir] = doc.seq;
-            doc.now = doc.now.compose(fir.delta);
-            doc.seq = [];
-
-            this.update(docId, 'exclude', [fir.user], fir.delta,
-                md5(JSONStringify(doc.now)));
-        } else {
-            const [fir, sec] = doc.seq;
-
-            console.log('fir', fir.user.username, fir.delta);
-            console.log('sec', sec.user.username, sec.delta);
-
-            const firShouldUpdate = fir.delta.transform(sec.delta, true);
-            console.log('firShouldUpdate', firShouldUpdate);
-            const secShouldUpdate = sec.delta.transform(fir.delta, false);
-            console.log('secShouldUpdate', secShouldUpdate);
-            
-            // Update 
-            const nextNow = doc.now.compose(fir.delta).compose(firShouldUpdate);
-            const nextHash = md5(JSONStringify(nextNow));
-            doc.now = nextNow;
-            
-
-            this.update(docId, 'include', [fir.user], firShouldUpdate, nextHash);
-            this.update(docId, 'include', [sec.user], secShouldUpdate, nextHash);
-
-            // Update
-            doc.seq = doc.seq.slice(2);
-            this.update(docId, 'exclude', [fir.user, sec.user], fir.delta.compose(sec.delta), nextHash);
-        }
+            doc.flushSeq((type, userlist, delta, hash) => {
+                this.update(zoneId, type, userlist, delta, hash);
+            });
+        })
     }
 
     update(
-        docId: string | number,
+        zoneId: string,
         type: 'include' | 'exclude',
         users: User[],
         delta: Delta,
@@ -152,7 +166,7 @@ export class CoZonePool extends EventEmitter {
             return acc;
         }, {} as { [key: string]: true });
 
-        this.getSockets(docId).then(sockets => {
+        this.getSockets(zoneId).then(sockets => {
             sockets.forEach(s => {
                 const { userInfo } = s.handshake.session as StdSession;
                 if (
@@ -172,14 +186,21 @@ export class CoZonePool extends EventEmitter {
         });
     }
 
-    getSockets(docId: string | number): Promise<socketio.Socket[]> {
-        const { docRoom } = this.findOne(docId);
+    getSockets(zoneId: string ): Promise<socketio.Socket[]> {
+        if (!this.pool[zoneId]) {
+            console.log(' - getSockets zoneId Not Found');
+            return Promise.resolve([]);
+        }
+
+        const { ioRoom } = this.findOne(zoneId);
 
         return new Promise((res, rej) => {
-            docRoom.clients((err: any, sids: string[]) => {
+            ioRoom.clients((err: any, sids: string[]) => {
                 err ? rej(err) :
-                    res(sids.map(sid => docRoom.connected[sid]));
+                    res(sids.map(sid => ioRoom.connected[sid]));
             });
         });
     }
 }
+
+export const coZonePool = new CoZonePool();

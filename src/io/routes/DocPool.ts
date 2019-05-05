@@ -1,7 +1,7 @@
 import * as socketio from "socket.io";
 import { EventEmitter } from "events";
 import { Delta } from "edit-ot-quill-delta";
-import { User, Doc, UserStatic } from "../Model";
+import { User, Doc, UserStatic } from "../../Model";
 import { StdSession } from "utils/StdSession";
 import * as md5 from "md5";
 import * as JSONStringify from "fast-json-stable-stringify"
@@ -88,7 +88,10 @@ export class DocPool extends EventEmitter {
 
     flush = (docId: number | string) => {
         const doc = this.findOne(docId);
-        console.log('To Flush', doc.now);
+        console.log('To Flush');
+        doc.now.forEach(op => {
+            console.log(' -', JSON.stringify(op));
+        })
 
         if (doc.seq.length === 0) {
             return;
