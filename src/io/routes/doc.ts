@@ -95,7 +95,8 @@ export default (io: socketio.Server) => {
             console.log('clients', err, __users__.map(u => u.username));
         });
 
-        socket.on('disconnect', () => {
+        socket.on('disconnect', reasone => {
+            console.log('User Disconnect', userInfo.username, reasone);
             docIo.emit('others-exit', userInfo);
         });
     
