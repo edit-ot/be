@@ -7,13 +7,14 @@ import { UserGroup } from './UserGroup';
 import { File } from './File';
 import { UserPunch } from './UserPunch';
 import { DB_CONFIG } from '../config';
-
+import { UserDoc } from './UserDoc';
 
 export const sequelize = new Sequelize(DB_CONFIG);
 
 sequelize.addModels([
     User,
     Doc,
+    UserDoc,
     Group,
     DocGroup,
     UserGroup,

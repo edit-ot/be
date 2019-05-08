@@ -11,8 +11,10 @@ export class RWDescriptor implements RWDescriptorBase {
     r: boolean;
     w?: boolean;
 
-    constructor(permissionStr: string) {
-        const rw = RWDescriptor.parse(permissionStr);
+    constructor(permissionStr: string | RWDescriptorBase = '') {
+        const rw = typeof permissionStr === 'string' ? 
+            RWDescriptor.parse(permissionStr) : 
+            permissionStr;
 
         this.r = rw.r;
         this.w = rw.w;
@@ -27,8 +29,15 @@ export class RWDescriptor implements RWDescriptorBase {
         return permission;
     }
 
+    toObj() {
+        return {
+            r: this.r, 
+            w: !!this.w
+        }
+    }
+
     static parse(permissionStr: string): RWDescriptor {
-        return (permissionStr || 'r').split('').reduce((acc, cur) => {
+        return (permissionStr || '').split('').reduce((acc, cur) => {
             acc[cur] = true;
             return acc;
         }, {} as RWDescriptor);

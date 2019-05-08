@@ -4,6 +4,7 @@ import { Group } from './Group';
 import { UserGroup } from './UserGroup';
 import { File } from './File';
 import { UserPunch } from './UserPunch';
+import { UserDoc } from './UserDoc';
 
 @Table
 export class User extends Model<User> {
@@ -26,11 +27,16 @@ export class User extends Model<User> {
     @HasMany(() => Doc)
     docs: Doc[];
 
+    @BelongsToMany(() => Doc, () => UserDoc)
+    relatedDocs: Group[];
+
     @HasMany(() => File)
     files: Doc[];
 
     @BelongsToMany(() => Group, () => UserGroup)
     groups: Group[];
+
+    
 
     @BelongsToMany(() => Group, () => UserPunch)
     punchGroups: Group[];

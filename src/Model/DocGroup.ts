@@ -15,16 +15,14 @@ export class DocGroup extends Model<DocGroup> {
     @Column
     groupId: string;
 
-    // @HasOne(() => Doc)
-    // doc: Doc;
-    
-    // @HasOne(() => Group)
-    // group: Group;
+    @Column
+    permission: string;
 
-    static link(docId: number, groupId: string) {
+    static link(docId: number, groupId: string, permission: string) {
         const dg = new DocGroup();
         dg.docId = docId;
         dg.groupId = groupId;
+        dg.permission = permission;
 
         return dg;
     }

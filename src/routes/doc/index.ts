@@ -5,7 +5,7 @@ import { StdSession } from "utils/StdSession";
 
 import PermissionRouter from "./permission";
 import { DocGroup } from "../../Model/DocGroup";
-import { Group } from "../../Model/Group";
+
 // import { User } from "../../Model";
 
 // import * as md5 from "md5";
@@ -15,130 +15,132 @@ const router = express.Router();
 
 router.use('*', LoginMidWare);
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     const session = req.session as StdSession;
-    const { user } = session;
 
-    User.findOne({
-        where: { username: user.username },
+    const user = await User.findOne({
+        where: { username: session.user.username },
         include: [{
-            model: Doc
+            model: Doc, as: 'docs'
         }]
-    }).then(user => {
-        res.json({
-            code: 200, 
-            msg: 'ok', 
-            data: (user && user.docs.map(d => d.toStatic())) || []
-        });
-    })
+    });
+
+    res.json({
+        code: 200, 
+        msg: 'ok', 
+        data: (user && user.docs.map(d => d.toStatic())) || []
+    });
 });
 
-router.get('/byId', (req, res) => {
+router.get('/byId', async (req, res) => {
     const session = req.session as StdSession;
     const { user } = session;
     const { username } = user;
-    const { docId } = req.query;
+    const { docId, withPmap } = req.query;
 
-    if (docId) {
-        Doc.findOne({
-            where: { id: docId },
-            include: [{ model: Group, include: [{ model: Doc }] }]
-        }).then(doc => {
-            if (doc) {
-                const fromGroup = doc.groups.some(g => {
-                    return g.canRead(user.username)
-                });
-
-                if ( // 权限
-                    doc.canRead(username) || fromGroup
-                ) {
-                    res.json({
-                        code: 200,
-                        msg: 'ok' + (fromGroup ? ' from group permission' : ''),
-                        data: doc.toStatic()
-                    });
-                } else {
-                    res.json({ code: 403, msg: 'no permission' });
-                }
-            } else {
-                res.json({ code: 404, query: req.query });
-            }
-        })
-    } else {
-        res.json({
+    if (!docId) {
+        return res.json({
             code: 404
+        });
+    }
+
+    try {
+        const doc = await Doc.findOne({
+            where: { id: docId }
+        });
+    
+        if (!doc) {
+            return res.json({ code: 404, query: req.query });
+        }
+        
+        const rw = await doc.ofPermission(username);
+    
+        if (rw.r) {
+            const pmap = withPmap ? (
+                await doc.getPermissionMap()
+            ) : undefined;
+
+            return res.json({
+                code: 200, 
+                data: Object.assign({}, doc.toStatic(), { pmap })
+            });
+        } else {
+            return res.json({
+                code: 403
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        return res.json({
+            code: 500,
+            err
         });
     }
 });
 
-const CreateDoc = (req: express.Request): Doc => {
-    const session = req.session as StdSession;
-    const { user } = session;
+router.post('/create', async (req, res, next) => {
+    const doc = Doc.CreateBlankDoc(req);
 
-    const theNewDoc = new Doc({
-        title: '未命名文档',
-        content: '',
-        owner: user.username,
-        permission: '',
-        isPublic: false
-    });
-
-    return theNewDoc;
-}
-
-router.post('/create', (req, res, next) => {
-    const doc = CreateDoc(req);
-
-    doc.save().then(() => {
+    try {
+        await doc.save();
         res.json({
             code: 200,
             msg: '创建成功'
         });
-    }).catch(next);
+    } catch (err) {
+        next(err);
+    }
 });
 
-router.post('/create-for-gorup', (req, res, next) => {
-    const doc = CreateDoc(req);
+router.post('/create-for-gorup', async (req, res, next) => {
+    const doc = Doc.CreateBlankDoc(req);
 
-    doc.save().then(() => {
-        const dg = DocGroup.link(doc.id, req.body.groupId);
-        dg.save().then(() => {
-            res.json({ code: 200 });
-        }).catch(next);
-    }).catch(next);
+    try {
+        await doc.save();
+
+        const dg = DocGroup.link(doc.id, req.body.groupId, 'rw');
+        
+        await dg.save();
+        
+        res.json({ code: 200 });
+    } catch (err) {
+        next(err);
+    }
 });
 
 
 function CreateUpdateTask(
     todo: (doc: Doc, ...args: Parameters<express.RequestHandler>) => void
 ): express.RequestHandler {
-    return (req, res, next) => {
+    return async (req, res, next) => {
         const session = req.session as StdSession;
         const { user } = session;
 
-        Doc.findOne({
-            where: {
-                id: req.body.id
-            }
-        }).then(doc => {
+        try {
+            const doc = await Doc.findOne({ where: { id: req.body.id }});
+
             if (!doc) {
-                res.json({
+                return res.json({
                     code: 404
                 });
-            } else if (
-                doc.canWrite(user.username)
-            ) {
+            }
+
+            const rw = await doc.ofPermission(user.username);
+
+            if (rw && rw.w) {
                 todo(doc, req, res, next);
 
-                doc.save().then(() => {
-                    res.json({ code: 200, data: doc, msg: 'updated' });
-                }).catch(next);
+                await doc.save();
+
+                return res.json({ code: 200, data: doc, msg: 'updated' });   
             } else {
-                res.json({
+                return res.json({
                     code: 403
                 });
             }
-        }).catch(next);
+        } catch (err) {
+            return next(err);
+        }
     }
 }
 
@@ -159,32 +161,35 @@ router.post('/save', CreateUpdateTask((doc, req) => {
 }))
 
 
-router.post('/delete', (req, res, next) => {
+router.post('/delete', async (req, res, next) => {
     const session = req.session as StdSession;
     const { user } = session;
-
-    Doc.findOne({
-        where: {
-            owner: user.username,
-            id: req.body.docId
-        }
-    }).then(doc => {
+    
+    try {
+        const doc = await Doc.findOne({
+            where: {
+                owner: user.username,
+                id: req.body.docId
+            }
+        })
+        
         if (!doc) {
-            res.json({
-                code: 200,
+            return res.json({
+                code: 404,
                 data: null
             });
-
-            return;
         } else {
-            return doc.destroy().then(() => {
-                res.json({
-                    code: 200,
-                    data: doc
-                })
+            await doc.destroy()
+    
+            return res.json({
+                code: 200,
+                data: doc.toStatic()
             });
         }
-    }).catch(next);
+    } catch (err) {
+        console.error('/doc/delete err', err);
+        return next(err);
+    }
 });
 
 router.use('/permission', PermissionRouter);

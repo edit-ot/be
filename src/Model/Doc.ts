@@ -1,8 +1,13 @@
+import * as express from "express";
 import * as md5 from "md5";
 import { Table, Model, Column, ForeignKey, CreatedAt, UpdatedAt, BelongsToMany, DataType } from 'sequelize-typescript';
 import { User } from './User';
 import { Group } from './Group';
 import { DocGroup } from './DocGroup';
+import { UserDoc } from "./UserDoc";
+import { RWDescriptor } from "../utils/RWDescriptor";
+import { UserGroup } from "./UserGroup";
+import { StdSession } from "utils/StdSession";
 
 export type RWDescriptor = {
     r: boolean,
@@ -26,11 +31,7 @@ export class Doc extends Model<Doc> {
 
     @Column
     isPublic: boolean;
-
-    @ForeignKey(() => User)
-    @Column
-    owner: string;
-    
+   
     @CreatedAt
     @Column
     createAt: Date;
@@ -39,51 +40,40 @@ export class Doc extends Model<Doc> {
     @Column
     updateAt: Date;
 
+    @ForeignKey(() => User)
+    @Column
+    owner: string;
+
     @BelongsToMany(() => Group, () => DocGroup)
     groups: Group[];
 
-    toPermissionObj(): UserPermissionMap {
-        if (!this.permission) return {};
-
-        return this.permission.split(',').reduce((acc, userLine) => {
-            const [username, rw] = userLine.split('|');
-
-            acc[username] =  (rw || 'rw').split('').reduce((acc, cur) => {
-                acc[cur] = true;
-                return acc;
-            }, {} as RWDescriptor);
-
-            return acc; 
-        }, {} as UserPermissionMap);
-    }
+    @BelongsToMany(() => User, () => UserDoc)
+    users: User[];
 
     toRoomName() {
         return `doc-${ this.title }-${ this.id }`;
     }
-
+    
     contentHash() {
         return md5(this.content || '');
     }
+    
+    async getPermissionMap(): Promise< UserPermissionMap > {
+        const uds = await UserDoc.findAll({
+            where: { docId: this.id }
+        });
 
-    // someOneCanWrite(username: string): Promise<boolean> {
-    //     if (this.canWrite(username)) {
-    //         return Promise.resolve(true);
-    //     } else {
+        const p = uds.reduce((acc, cur) => {
+            const rw = new RWDescriptor(cur.permission);
+            acc[cur.username] = rw;
+            return acc;
+        }, {} as UserPermissionMap);
 
+        if (this.isPublic) {
+            p['*'] = new RWDescriptor(this.permission);
+        }
 
-    //     }
-    // }
-
-    pmapToStr(p: UserPermissionMap) {
-        return Object.keys(p).map(username => {
-            const rwd = p[username];
-            let permission = '';
-            
-            if (rwd.r) permission += 'r';
-            if (rwd.w) permission += 'w';
-            
-            return `${ username }|${ permission }`
-        }).join(',');
+        return p;
     }
 
     toStatic() {
@@ -91,12 +81,14 @@ export class Doc extends Model<Doc> {
             id: this.id,
             title: this.title,
             content: this.content,
+            
+            owner: this.owner,
+
             permission: this.permission,
             isPublic: this.isPublic,
-            owner: this.owner,
+
             createAt: this.createAt,
-            updateAt: this.updateAt,
-            pmap: this.toPermissionObj()
+            updateAt: this.updateAt
         }
     }
 
@@ -105,29 +97,62 @@ export class Doc extends Model<Doc> {
         return username === this.owner;
     }
 
-    canRead(username: string) {
-        // 判断传入的用户名是否是 owner
-        const isOwner = this.isOwner(username);
-        if (isOwner) return true;
+    async ofPermission(username: string): Promise<RWDescriptor> {
+        const docId = this.id;
 
-        // this.toPermissionObj 会返回 this 的权限定义
-        // 其类型为 UserPermissionMap 
-        const p = this.toPermissionObj();
+        if (this.isOwner(username)) {
+            return new RWDescriptor('rw');
+        }
 
-        // 如果文档公共且 p 中存在 * 且其权限定义含 r 
-        if (this.isPublic && p['*'] && p['*'].r) return true;
+        if (this.isPublic) {
+            return new RWDescriptor(this.permission);
+        }
 
-        // 否则直接返回权限定义
-        return p[username] && p[username].r;
-    }
+        const NO_PERMISSION = new RWDescriptor();
+        
+        const ud = await UserDoc.findOne({
+            where: { docId, username }
+        });
+    
+        if (ud) {
+            return new RWDescriptor(ud.permission);
+        }
+    
+        const dgs = await DocGroup.findAll({ where: { docId } });
+        if (dgs.length === 0) {
+            return NO_PERMISSION;   
+        }
+    
+        for (let i = 0; i < dgs.length; i ++) {
+            const dg = dgs[i];
+            const ug = await UserGroup.findOne({
+                where: { username, groupId: dg.groupId }
+            });
+    
+            if (ug) {
+                const rw = new RWDescriptor(ug.permission);
+                if (rw.r || rw.w) {
+                    return rw;
+                }
+            }
+        }
+        
+        return NO_PERMISSION;
+    } 
 
-    canWrite(username: string) {
-        const isOwner = this.isOwner(username);
-        if (isOwner) return true;
 
-        const p = this.toPermissionObj();
-        if (this.isPublic && p['*'] && p['*'].w) return true;
-
-        return p[username] && p[username].w;
+    static CreateBlankDoc(req: express.Request): Doc {
+        const session = req.session as StdSession;
+        const { user } = session;
+    
+        const theNewDoc = new Doc({
+            title: '未命名文档',
+            content: '',
+            owner: user.username,
+            permission: '',
+            isPublic: false
+        });
+    
+        return theNewDoc;
     }
 }
