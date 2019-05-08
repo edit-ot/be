@@ -58,7 +58,7 @@ export class Doc extends Model<Doc> {
     }
 
     toRoomName() {
-        return `${ this.title }-${ this.id }`;
+        return `doc-${ this.title }-${ this.id }`;
     }
 
     contentHash() {

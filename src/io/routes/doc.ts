@@ -5,9 +5,11 @@ import { session } from "../../app";
 import { StdSession } from "utils/StdSession";
 import { User, Doc } from "../../Model";
 import { Delta } from "edit-ot-quill-delta";
-import { DocPool, UserComment } from "./DocPool";
+import { coZonePool, UserComment } from "../CoZone";
 
-const docPool = new DocPool();
+// const docPool = new DocPool();
+
+
 
 export default (io: socketio.Server) => {
     const docIo = io.of('/doc');
@@ -46,13 +48,13 @@ export default (io: socketio.Server) => {
             where: { id: docId }
         }).then(doc => {
             if (!doc) {
-                socket.disconnect(true);
                 socket.emit('data-error');
+                socket.disconnect(true);
             } else {
                 // @ts-ignore
                 socket.doc = doc;
     
-                socket.join(doc.toRoomName(), () => {               
+                socket.join(doc.toRoomName(), () => {
                     next();
                 });
             }
@@ -64,10 +66,20 @@ export default (io: socketio.Server) => {
         const doc: Doc = socket.doc;
     
         const { user, userInfo } = socket.handshake.session as StdSession;
-        const docIoRoom = docIo.to(doc.toRoomName());
-    
-        docPool.initRoom(doc, docIoRoom);
-           
+
+        const docRoomName = doc.toRoomName();
+        const subDocId = '1';
+        const docIoRoom = docIo.to(docRoomName);
+        
+        const zone = coZonePool.createZone(docRoomName, docIoRoom);
+
+        const initDelta = doc.content ?
+            new Delta(JSON.parse(doc.content)) : new Delta().insert('\n');
+
+        zone.createSubDoc(subDocId, initDelta);
+
+        zone.startTask();
+        
         docIoRoom.clients((err: any, list: string[]) => {
             const users: User[] = list.filter(sid => {
                 return docIo.connected[sid].connected;
@@ -82,12 +94,16 @@ export default (io: socketio.Server) => {
                 delete map[u.username];
                 return r;
             });
+
             
-            // 通知
+            const sharedDoc = zone.findSubDoc(subDocId);
             socket.emit('i-logined', {
                 userInfo, users: __users__, 
                 contentHash: doc.contentHash(),
-                doc: docPool.findOneStatic(doc.id)
+                doc: {
+                    now: sharedDoc.now,
+                    docComments: sharedDoc.docComments
+                }
             });
     
             // 通知
@@ -114,8 +130,7 @@ export default (io: socketio.Server) => {
             const comment = data.comment as UserComment;
             const line = data.line as number;
     
-            const target = docPool.findOne(doc.id);
-            const { docComments } = target;
+            const { docComments } = zone.findSubDoc(subDocId);
     
             const idx = docComments.findIndex(d => d.line === line);
     
@@ -132,21 +147,15 @@ export default (io: socketio.Server) => {
         });
     
         socket.on('remove-doc-comments', line => {
-            const target = docPool.findOne(doc.id);
-            if (!target) return console.log('remove-doc-comments not found');
-    
-            const { docComments } = target;
-            const idx = docComments.findIndex(d => d.line === line);
-            if (idx === -1) return;
-            docComments.splice(idx, 1);
-    
+            const sharedDoc = zone.findSubDoc(subDocId);
+            sharedDoc.removeComment(d => d.line = line)   
             docIoRoom.emit('remove-doc-comments', line);
         })
     
         socket.on('get-docComments', docId => {
-            console.log('get-docComments', docId, Object.keys(docPool.pool));
-            const target = docPool.findOne(docId);
-            socket.emit('reveive-docComments', target.docComments);
+            // console.log('get-docComments');
+            const sharedDoc = zone.findSubDoc(subDocId);
+            socket.emit('reveive-docComments', sharedDoc.getComments());
         });
     
         socket.on('change-title', data => {
@@ -160,14 +169,14 @@ export default (io: socketio.Server) => {
         socket.on('say-hello', user => {
             console.log('say-hello', user);
             docIoRoom.emit('say-hello', user);
-        })
+        });
     
         socket.on('updateContents', async data => {
             console.log('!! updateContents', user.username);
-    
+
             const delta = new Delta(data.delta);
-            docPool.addToSeqFor(doc.id, userInfo, delta);
-            
+
+            zone.addSeqFor(subDocId, userInfo, delta);
             // socket.emit('finishUpdate');
         });
     
