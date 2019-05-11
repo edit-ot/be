@@ -7,9 +7,32 @@ import { RWDescriptorBase, RWDescriptor } from "../../../utils/RWDescriptor";
 
 const router = express.Router(); 
 
+router.post('/cancel-share', async (req, res) => {
+    const { user } = req.session as StdSession;
+
+    const ud = await UserDoc.findOne({
+        where: { username: user.username, docId: req.body.docId || '___' }
+    });
+
+    if (!ud) {
+        res.json({
+            code: 404,
+            msg: `user: ${ user.username }; docId: ${ req.body.docId }`
+        });
+    } else {
+        await ud.destroy();
+
+        res.json({
+            code: 200,
+            data: ud
+        });
+    }
+});
+
+
 // param 
 router.use('*', (req, res, next) => {
-    const { docId } = req.body;
+    const docId = req.body.docId || req.query.docId;
 
     if (!docId) {
         res.json({
@@ -25,7 +48,7 @@ router.use('*', (req, res, next) => {
 // owner
 router.use('*', (req, res, next) => {
     const { user } = req.session as StdSession;
-    const { docId } = req.body;
+    const docId = req.body.docId || req.query.docId;
 
     Doc.findOne({
         where: { id: docId }

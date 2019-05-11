@@ -13,16 +13,9 @@ export default (io: socketio.Server) => {
     msgIo.use(IOSessionBridge);
     
     msgIo.use(IOLoginMiddleware);
-
-    
+  
     msgIo.on('connect', socket => {
         const { user } = socket.handshake.session as StdSession;
-        console.log('/msg onconnect');
-        console.log('/msg onconnect');
-        console.log('/msg onconnect');
-        console.log('/msg onconnect');
-        console.log('/msg onconnect');
-        console.log('/msg onconnect');
         console.log('/msg onconnect');
 
         socket.on('msg-login', () => {

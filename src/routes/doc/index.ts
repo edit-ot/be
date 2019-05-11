@@ -17,18 +17,24 @@ router.use('*', LoginMidWare);
 
 router.get('/', async (req, res) => {
     const session = req.session as StdSession;
-
+   
     const user = await User.findOne({
         where: { username: session.user.username },
         include: [{
-            model: Doc, as: 'docs'
+            model: Doc,
+            as: req.query.relatedDocs ?
+                'relatedDocs' : 'docs'
         }]
     });
+
+    if (!user) return;
+
+    const docs = req.query.relatedDocs ? user.relatedDocs : user.docs;
 
     res.json({
         code: 200, 
         msg: 'ok', 
-        data: (user && user.docs.map(d => d.toStatic())) || []
+        data: docs.map(d => d.toStatic())
     });
 });
 

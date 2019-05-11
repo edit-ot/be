@@ -26,7 +26,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/byId', async (req, res) => {
-    const { user } = req.session as StdSession;
+    // const { user } = req.session as StdSession;
     const { groupId } = req.query;
 
     const groupInclude = [{
@@ -40,7 +40,7 @@ router.get('/byId', async (req, res) => {
     }]
 
     const group = await Group.findOne({
-        where: { groupId, owner: user.username },
+        where: { groupId },
         include: groupInclude
     });
     

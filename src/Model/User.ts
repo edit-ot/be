@@ -28,7 +28,7 @@ export class User extends Model<User> {
     docs: Doc[];
 
     @BelongsToMany(() => Doc, () => UserDoc)
-    relatedDocs: Group[];
+    relatedDocs: Doc[];
 
     @HasMany(() => File)
     files: Doc[];
