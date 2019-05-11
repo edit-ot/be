@@ -4,9 +4,9 @@ import { LoginMidWare } from "../../routes/user";
 import { StdSession } from "utils/StdSession";
 import { CreateGroupUpdateTask } from "./group-util";
 import { User, Doc } from "../../Model";
-import { DocGroup } from "../../Model/DocGroup";
-import { RWDescriptor, pmapToStr } from "../../utils/RWDescriptor";
+import { RWDescriptor, RWDescriptorBase } from "../../utils/RWDescriptor";
 import { UserGroup } from "../../Model/UserGroup";
+import { DocGroup } from "../../Model/DocGroup";
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get('/', (req, res) => {
     });
 });
 
-router.get('/byId', (req, res) => {
+router.get('/byId', async (req, res) => {
     const { user } = req.session as StdSession;
     const { groupId } = req.query;
 
@@ -39,26 +39,17 @@ router.get('/byId', (req, res) => {
         as: 'ownerInfo'
     }]
 
-    Group.findOne({
+    const group = await Group.findOne({
         where: { groupId, owner: user.username },
         include: groupInclude
-    }).then(group => {
-        if (!group) {
-            UserGroup.findOne({
-                where: { groupId, username: user.username },
-                include: [{ model: Group, include: groupInclude }]
-            }).then(ug => {
-                if (!ug) {
-                    res.json({ code: 404 })
-                } else {
-                    res.json({ code: 200, data: ug.group });
-                }
-            })
-        } else {
-            res.json({ code: 200, data: group.toStatic() });
-        }
-        
-    })
+    });
+    
+    if (!group) {
+        res.json({ code: 404 });
+    } else {
+        const pmap = await group.getPermissionMap();
+        res.json({ code: 200, data: Object.assign({}, group.toStatic(), { pmap }) });
+    }
 })
 
 router.get('/joined', (req, res) => {
@@ -96,55 +87,45 @@ router.get('/docs', (req, res) => {
     });
 });
 
-function GetDocAndGroup(docId: number | string, groupId: string) {
-    return Promise.all([
-        Doc.findOne({ where: { id: docId } }),
-        Group.findOne({ where: { groupId } })
-    ]);
-}
-
-router.post('/doc-link-group', (req, res, next) => {
+// 个人把文档分享给小组
+router.post('/doc-link-group', async (req, res, next) => {
     const { user } = req.session as StdSession;
+    const { permission, docId, groupId } = req.body;
 
-    GetDocAndGroup(req.body.docId, req.body.groupId).then(results => {
-        const [doc, group] = results;
-        if (!(doc && group)) {
-            res.json({ code: 404 });
-        } else if (doc.owner !== user.username) {
-            res.json({ code: 403 })
-        } else {
-            const dg = DocGroup.link(req.body.docId, req.body.groupId);
+    const setString = typeof permission === 'string' ?
+        permission :
+        new RWDescriptor(permission as RWDescriptorBase).toString();
+    
+    const doc = await Doc.findOne({ where: { id: docId } });
 
-            dg.save().then(() => {
-                res.json({ code: 200 });
-            }).catch(() => {
-                res.json({ code: 405, msg: `该文档已添加至 ${ group.groupName }, 无需重复` });
-            });
-        }
-    }).catch(next);
-});
+    if (!doc) {
+        res.json({ code: 404 });
+    } else if (!doc.isOwner(user.username)) {
+        res.json({ code: 403 });
+    }
 
-router.post('/doc-unlink-group', (req, res, next) => {
-    const { user } = req.session as StdSession;
-    const { docId, groupId } = req.body;
-
-    GetDocAndGroup(docId, groupId).then(results => {
-        const [doc, group] = results;
-        if (!(doc && group)) {
-            res.json({ code: 404 });
-        } else if (doc.owner === user.username || group.owner === user.username) {
-            DocGroup.findOne({ where: { docId, groupId: groupId } }).then(dg => {
-                if (!dg) res.json({ code: 404 });
-                else dg.destroy().then(ok => {
-                    res.json({ code: 200 });
-                })
-            })
-        } else {
-            res.json({ code: 403 });
-        }
+    const dg = await DocGroup.findOne({
+        where: { docId, groupId }
     });
-});
 
+    if (dg) {
+        if (permission) {
+            dg.permission = setString;
+            await dg.save();
+        } else {
+            await dg.destroy();
+        }
+    } else {
+        if (permission) {
+            const newDg = DocGroup.link(docId, groupId, setString);
+            await newDg.save();
+        } else {
+            // not thing 
+        }
+    }
+
+    res.json({ code: 200 });
+});
 
 router.post('/', (req, res) => {
     const { user } = req.session as StdSession;
@@ -167,40 +148,50 @@ router.post('/', (req, res) => {
     });
 });
 
-router.post('/set-permission', (req, res) => {
+router.post('/set-permission', async (req, res) => {
     const { user } = req.session as StdSession;
     const { groupId, username, set } = req.body;
     
-    Group.findOne({ where: { groupId } }).then(async g => {
-        if (!g) {
-            res.json({ code: 404 })
-        } else if (g.canWrite(user.username)) {
-            const { pmap } = g.toStatic();
+    const setString = typeof set === 'string' ?
+        set : new RWDescriptor(set as RWDescriptorBase).toString();
 
-            if (set === 'r' || set === 'rw') {
-                if (!pmap[username]) {
-                    const up = UserGroup.link(username, groupId, set);
-                    await up.save();
-                }
+    const [group, ug] = await Promise.all([
+        Group.findOne({
+            where: { groupId }
+        }),
+        UserGroup.findOne({
+            where: { username, groupId }
+        })
+    ]);
 
-                pmap[username] = new RWDescriptor(set);
-            } else {
-                if (pmap[username]) {
-                    await UserGroup.unlink(username, groupId);
-                }
+    if (!group) {
+        res.json({ code: 404, msg: 'group not found' });
+        return;
+    }
 
-                delete pmap[username];
-            }
-
-            g.permission = pmapToStr(pmap);
-
-            g.save().then(() => {
-                res.json({ code: 200, data: true });
-            })
+    if (group.owner !== user.username) {
+        res.json({ code: 403, msg: '仅有所有者才可以修改权限' });
+        return;
+    }
+    
+    if (ug) {
+        if (!set) {
+            await ug.destroy();
+            res.json({ code: 200 });
         } else {
-            res.json({ code: 403 });
+            ug.permission = setString;
+            await ug.save();
+            res.json({ code: 200 });
         }
-    })
+    } else {
+        if (set) {
+            const newUg = UserGroup.link(username, groupId, setString);
+            await newUg.save();
+            res.json({ code: 200 });
+        } else {
+            res.json({ code: 200 });
+        }
+    }
 })
 
 
@@ -208,27 +199,23 @@ router.post('/name', CreateGroupUpdateTask((group, req, res) => {
     group.groupName = req.body.groupName || '未设置小组名';
 }));
 
-router.post('/delete', (req, res, next) => {
+router.post('/delete', async (req, res, next) => {
     const session = req.session as StdSession;
     const { user } = session;
 
-    Group.findOne({
-        where: {
-            groupId: req.body.groupId
-        }
-    }).then(group => {
-        if (!group) {
-            res.json({ code: 404 });
+    const group = await Group.findOne({
+        where: { groupId: req.body.groupId }
+    });
+
+    if (!group) {
+        res.json({ code: 404 });
+    } else {
+        if (group.owner === user.username) {
+            group.destroy().then(() => {
+                res.json({ code: 200, data: group });
+            }).catch(next)
         } else {
-            if (group.owner === user.username) {
-                group.destroy().then(() => {
-                    res.json({ code: 200, data: group });
-                }).catch(next)
-            } else {
-                res.json({ code: 403, msg: '你不是该组所有者，所以不能删除' });
-            }
+            res.json({ code: 403, msg: '你不是该组所有者，所以不能删除' });
         }
-    }).catch(next);
-})
-
-
+    }
+});

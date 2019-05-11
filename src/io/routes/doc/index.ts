@@ -1,46 +1,17 @@
 import * as socketio from "socket.io";
-
-import * as sharedSession from "express-socket.io-session";
-import { session } from "../../app";
-import { StdSession } from "utils/StdSession";
-import { User, Doc } from "../../Model";
+import { User, Doc } from "../../../Model";
 import { Delta } from "edit-ot-quill-delta";
-import { coZonePool, UserComment } from "../CoZone";
-
-// const docPool = new DocPool();
-
-
+import { StdSession } from "utils/StdSession";
+import { coZonePool, UserComment } from "../../CoZone";
+import { IOSessionBridge, IOLoginMiddleware } from "../../wares/IOLogin";
 
 export default (io: socketio.Server) => {
     const docIo = io.of('/doc');
 
-    docIo.use(sharedSession(session, {
-        autoSave: true
-    }));
+    docIo.use(IOSessionBridge);
     
-    docIo.use((socket, next) => {
-        const { user } = socket.handshake.session as StdSession;
-    
-        const cancelConn = () => {
-            socket.disconnect(true);
-            socket.emit('no-login');
-            console.log('A User Want To Login, But Refuse. (he\'s no session)');
-        }
-        
-        if (user) {
-            User.findOne({ where: { username: user.username } }).then(userInfo => {
-                if (!userInfo) {
-                    cancelConn()
-                } else {
-                    (socket.handshake.session as StdSession).userInfo = userInfo;
-                    next();
-                }
-            });
-        } else {
-            cancelConn();
-        }
-    });
-    
+    docIo.use(IOLoginMiddleware);
+
     docIo.use((socket, next) => {
         const { docId } = socket.handshake.query;
     

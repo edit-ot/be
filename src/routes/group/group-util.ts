@@ -20,7 +20,7 @@ export function CreateGroupUpdateTask(
                 res.json({
                     code: 404
                 });
-            } else if (group.canWrite(user.username)) {
+            } else if (group.isOwner(user.username)) {
                 todo(group, req, res, next);
 
                 group.save().then(() => {

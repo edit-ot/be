@@ -9,7 +9,7 @@ import { User } from "./User";
 import { UserGroup } from './UserGroup';
 import { DocGroup } from './DocGroup';
 import { Doc } from './Doc';
-import { toPermissionObj } from '../utils/RWDescriptor';
+import { UserPermissionMap, RWDescriptor } from '../utils/RWDescriptor';
 
 @Table
 export class Group extends Model<Group> {
@@ -77,8 +77,21 @@ export class Group extends Model<Group> {
         return group;
     }
 
-    toStatic() {
+    async getPermissionMap(): Promise< UserPermissionMap > {
+        const gs = await UserGroup.findAll({
+            where: { groupId: this.groupId }
+        });
 
+        const p = gs.reduce((acc, cur) => {
+            const rw = new RWDescriptor(cur.permission);
+            acc[cur.username] = rw;
+            return acc;
+        }, {} as UserPermissionMap);
+
+        return p;
+    }
+
+    toStatic() {
         return {
             groupName: this.groupName, 
             groupIntro: this.groupIntro,
@@ -87,35 +100,11 @@ export class Group extends Model<Group> {
             users: this.users,
             docs: this.docs,
             ownerInfo: this.ownerInfo,
-            owner: this.owner,
-            pmap: toPermissionObj(this.permission)
+            owner: this.owner
         }
     }
 
-
     isOwner(username: string): boolean {
         return username === this.owner;
-    }
-
-    canRead(username: string) {
-        const isOwner = this.isOwner(username);
-        if (isOwner) return true;
-
-        const p = toPermissionObj(this.permission);
-
-        if (p['*'] && p['*'].r) return true;
-
-        return p[username] && p[username].r;
-    }
-
-    canWrite(username: string) {
-        const isOwner = this.isOwner(username);
-        if (isOwner) return true;
-
-        const p = toPermissionObj(this.permission);
-
-        if (p['*'] && p['*'].w) return true;
-
-        return p[username] && p[username].w;
     }
 }

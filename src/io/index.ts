@@ -1,5 +1,6 @@
 import * as socketio from "socket.io";
 import docRoute from "./routes/doc";
+import msgRoute from "./routes/msg";
 
 export function ATTACH_IO(server: any) {
     // const io = socketio(server, {
@@ -10,6 +11,8 @@ export function ATTACH_IO(server: any) {
     const io = socketio();
     io.listen(5556);
     // io.attach(server);
-    docRoute(io);
+
+    docRoute(io);    
+    msgRoute(io);
 }
 

@@ -111,7 +111,7 @@ router.post('/', async (req, res, next) => {
             res.json({ code: 200, doc: doc.toStatic() });
         }
     } else {
-        if (set)         {
+        if (set) {
             const ud = UserDoc.link(username, doc.id, setString);
             await ud.save();
             res.json({ code: 200, doc: doc.toStatic() });
