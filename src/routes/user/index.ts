@@ -5,6 +5,7 @@ import { StdSession } from "utils/StdSession";
 import { Sequelize } from "sequelize-typescript";
 import { AVATAR_BASE } from "../../config";
 import { File } from "../../Model/File";
+import { Group } from "../../Model/Group";
 
 
 // import * as md5 from "md5";
@@ -27,7 +28,24 @@ router.get('/avatar/:username', (req, res) => {
             res.redirect(user.avatar);
         }
     })
-})
+});
+
+router.get('/info/:username', (req, res) => {
+    const { username } = req.params;
+
+    User.findOne({
+        attributes: { exclude: SECURITY_EXCLUDE },
+        include: [{ model: Group, as: 'groups' }],
+        where: { username: username }
+    }).then(user => {
+        if (!user) {
+            res.status(404);
+            res.json({ code: 404, msg: 'user not found' });
+        } else {
+            res.json({ code: 200, data: user });
+        }
+    })
+});
 
 router.get('/me', (req, res) => {
     if (req.session && req.session.user) {

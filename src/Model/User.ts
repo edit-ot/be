@@ -36,8 +36,6 @@ export class User extends Model<User> {
     @BelongsToMany(() => Group, () => UserGroup)
     groups: Group[];
 
-    
-
     @BelongsToMany(() => Group, () => UserPunch)
     punchGroups: Group[];
 

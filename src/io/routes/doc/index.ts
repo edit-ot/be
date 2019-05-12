@@ -66,20 +66,22 @@ export default (io: socketio.Server) => {
                 return r;
             });
 
-            
             const sharedDoc = zone.findSubDoc(subDocId);
-            socket.emit('i-logined', {
-                userInfo, users: __users__, 
-                contentHash: doc.contentHash(),
-                doc: {
-                    now: sharedDoc.now,
-                    docComments: sharedDoc.docComments
-                }
+
+            socket.on('i-login', () => {
+                socket.emit('i-logined', {
+                    userInfo, users: __users__, 
+                    contentHash: doc.contentHash(),
+                    doc: {
+                        now: sharedDoc.now,
+                        docComments: sharedDoc.docComments
+                    }
+                });
+
+                // 通知
+                docIo.emit('others-joined', userInfo);
+                console.log('clients', err, __users__.map(u => u.username));
             });
-    
-            // 通知
-            docIo.emit('others-joined', userInfo);
-            console.log('clients', err, __users__.map(u => u.username));
         });
 
         socket.on('disconnect', reasone => {

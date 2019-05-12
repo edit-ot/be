@@ -60,7 +60,8 @@ router.get('/byId', async (req, res) => {
         }
         
         const rw = await doc.ofPermission(username);
-    
+        console.log('/api/doc/byId', username, rw);
+        
         if (rw.r) {
             const pmap = withPmap ? (
                 await doc.getPermissionMap()

@@ -97,6 +97,10 @@ export class Doc extends Model<Doc> {
         return username === this.owner;
     }
 
+    /**
+     * 获取用户对 this 的权限
+     * @param username 
+     */
     async ofPermission(username: string): Promise<RWDescriptor> {
         const docId = this.id;
 
@@ -125,6 +129,7 @@ export class Doc extends Model<Doc> {
     
         for (let i = 0; i < dgs.length; i ++) {
             const dg = dgs[i];
+
             const ug = await UserGroup.findOne({
                 where: { username, groupId: dg.groupId }
             });
@@ -134,6 +139,14 @@ export class Doc extends Model<Doc> {
                 if (rw.r || rw.w) {
                     return rw;
                 }
+            }
+
+            const g = await Group.findOne({
+                where: { owner: username }
+            });
+
+            if (g && (g.owner === username)) {
+                return new RWDescriptor('rw');
             }
         }
         
