@@ -206,10 +206,15 @@ router.post('/update-all', CreateGroupUpdateTask((group, req, res) => {
     if (req.body.groupIntro) {
         group.groupIntro = req.body.groupIntro;
     }
+    
     if (req.body.groupAvatar) {
         group.groupAvatar = req.body.groupAvatar;
+
+        if (req.body.groupAvatar === 'remove') {
+            group.groupAvatar = '';
+        }
     }
-}))
+}));
 
 router.post('/delete', async (req, res, next) => {
     const session = req.session as StdSession;
