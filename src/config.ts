@@ -11,7 +11,7 @@ export const DB_CONFIG = {
 
 
 export const PUBLIC_BASE = path.join(__dirname, 'public');
-export const AVATAR_BASE = path.join(PUBLIC_BASE, 'user-avatar');
+export const FILES_BASE = path.join(PUBLIC_BASE, 'user-files');
 
-fs.ensureDirSync(AVATAR_BASE);
+fs.ensureDirSync(FILES_BASE);
 

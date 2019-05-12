@@ -18,7 +18,8 @@ export function CreateGroupUpdateTask(
         }).then(group => {
             if (!group) {
                 res.json({
-                    code: 404
+                    code: 404,
+                    msg: 'group not found, check req.body.groupId'
                 });
             } else if (group.isOwner(user.username)) {
                 todo(group, req, res, next);

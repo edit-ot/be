@@ -199,6 +199,18 @@ router.post('/name', CreateGroupUpdateTask((group, req, res) => {
     group.groupName = req.body.groupName || '未设置小组名';
 }));
 
+router.post('/update-all', CreateGroupUpdateTask((group, req, res) => {
+    if (req.body.groupName) {
+        group.groupName = req.body.groupName;
+    }
+    if (req.body.groupIntro) {
+        group.groupIntro = req.body.groupIntro;
+    }
+    if (req.body.groupAvatar) {
+        group.groupAvatar = req.body.groupAvatar;
+    }
+}))
+
 router.post('/delete', async (req, res, next) => {
     const session = req.session as StdSession;
     const { user } = session;

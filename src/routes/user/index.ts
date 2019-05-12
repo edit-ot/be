@@ -3,7 +3,7 @@ import * as multer from "multer";
 import { User } from "../../Model";
 import { StdSession } from "utils/StdSession";
 import { Sequelize } from "sequelize-typescript";
-import { AVATAR_BASE } from "../../config";
+import { FILES_BASE } from "../../config";
 import { File } from "../../Model/File";
 import { Group } from "../../Model/Group";
 
@@ -194,12 +194,12 @@ router.post('/update', (req, res, next) => {
 });
 
 const upload = multer({
-    dest: AVATAR_BASE
+    dest: FILES_BASE
 });
 
 router.post('/avatar', upload.single('file'), (req, res, next) => {
     const { user } = req.session as StdSession;
-    const url = `/user-avatar/${ req.file.filename }`;
+    const url = `/user-files/${ req.file.filename }`;
 
     // Set Session
     req.session && (
@@ -225,6 +225,22 @@ router.post('/avatar', upload.single('file'), (req, res, next) => {
     });
 
     console.log('!!!!! req.file', req.file);
-})
+});
+
+router.post('/upload-file', upload.single('file'), (req, res, next) => {
+    const { user } = req.session as StdSession;
+    const url = `/user-files/${ req.file.filename }`;
+
+    const f = new File();
+    f.owner = user.username;
+    f.URL = url;
+    f.fileId = req.file.filename;
+
+    f.save().then(() => {
+        res.json({
+            code: 200, data: f
+        });
+    }).catch(next);
+});
 
 export default router;
