@@ -1,4 +1,4 @@
-import { Table, Model, Column, ForeignKey, IsUUID, CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Model, Column, ForeignKey, IsUUID, BelongsTo } from 'sequelize-typescript';
 import { User } from './User';
 import { Group } from './Group';
 
@@ -15,12 +15,21 @@ export class UserPunch extends Model<UserPunch> {
     @ForeignKey(() => Group)
     @Column
     groupId: string;
-
-    @CreatedAt
+    
     @Column
-    createAt: Date;
+    date: Date;
 
-    @UpdatedAt
     @Column
-    updateAt: Date;
+    nDayBefore: number;
+
+    
+    @BelongsTo(() => User)
+    owner: User;
+
+    static today() {
+        const d = Date.now();
+        const today = new Date(d - (d % 86400000));
+
+        return today;
+    }
 }

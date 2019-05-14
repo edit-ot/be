@@ -3,7 +3,6 @@ import { Doc } from './Doc';
 import { Group } from './Group';
 import { UserGroup } from './UserGroup';
 import { File } from './File';
-import { UserPunch } from './UserPunch';
 import { UserDoc } from './UserDoc';
 
 @Table
@@ -36,8 +35,8 @@ export class User extends Model<User> {
     @BelongsToMany(() => Group, () => UserGroup)
     groups: Group[];
 
-    @BelongsToMany(() => Group, () => UserPunch)
-    punchGroups: Group[];
+    // @BelongsToMany(() => Group, () => UserPunch)
+    // punchGroups: Group[];
 
     @HasMany(() => Group, 'owner')
     ownGroups: Group[];

@@ -7,7 +7,6 @@ import { FILES_BASE } from "../../config";
 import { File } from "../../Model/File";
 import { Group } from "../../Model/Group";
 
-
 // import * as md5 from "md5";
 
 const SECURITY_EXCLUDE = ['openid', 'id', 'pwd'];
