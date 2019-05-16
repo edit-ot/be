@@ -56,6 +56,14 @@ export class SharedDoc {
         return this.docComments;
     }
 
+    static getHash(obj: any): string {
+        return md5(JSONStringify(obj));
+    }
+
+    get nowHash() {
+        return SharedDoc.getHash(this.now);
+    }
+
     flushSeq = (patcher: Patcher) => {
         if (this.seq.length === 0) {
             return;
@@ -68,7 +76,8 @@ export class SharedDoc {
                 'exclude',
                 [fir.user],
                 fir.delta,
-                md5(JSONStringify(this.now))
+                // md5(JSONStringify(this.now))
+                this.nowHash
             );
         } else {
             const [fir, sec] = this.seq;
@@ -84,7 +93,8 @@ export class SharedDoc {
             
             // Update 
             const nextNow = this.now.compose(fir.delta).compose(firShouldUpdate);
-            const nextHash = md5(JSONStringify(nextNow));
+            // const nextHash = md5(JSONStringify(nextNow));
+            const nextHash = SharedDoc.getHash(nextNow);
             this.now = nextNow;
             
             patcher('include', [fir.user], firShouldUpdate, nextHash);

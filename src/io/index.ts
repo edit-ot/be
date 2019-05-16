@@ -1,6 +1,7 @@
 import * as socketio from "socket.io";
 import docRoute from "./routes/doc";
 import msgRoute from "./routes/msg";
+import cardRoute from "./routes/card";
 
 export function ATTACH_IO(server: any) {
     // const io = socketio(server, {
@@ -14,5 +15,6 @@ export function ATTACH_IO(server: any) {
 
     docRoute(io);    
     msgRoute(io);
+    cardRoute(io);
 }
 

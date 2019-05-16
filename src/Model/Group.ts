@@ -56,7 +56,10 @@ export class Group extends Model<Group> {
 
     @Column(DataType.TEXT('long'))
     card: string;
-    
+
+    toRoomName() {
+        return `groupId-${ this.groupId }`;
+    }
 
     static findAllWithOwner(owner: string) {
         return Group.findAll({

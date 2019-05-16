@@ -42,7 +42,7 @@ export default (io: socketio.Server) => {
         const subDocId = '1';
         const docIoRoom = docIo.to(docRoomName);
         
-        const zone = coZonePool.createZone(docRoomName, docIoRoom);
+        const zone = coZonePool.createZone(docRoomName, docIoRoom, {});
 
         const initDelta = doc.content ?
             new Delta(JSON.parse(doc.content)) : new Delta().insert('\n');

@@ -49,4 +49,13 @@ export class SocketManager extends EventEmitter {
             });
         });
     }
+
+    setLoginedUsersFor(target: socketio.Socket | socketio.Namespace) {
+        return this.ofClients().then(cs => {
+            const users = cs.map(c => c.userInfo);
+            target.emit('setLoginedUsers', users);
+
+            return users;
+        });
+    }
 }

@@ -4,17 +4,20 @@ import { User } from "../../Model";
 import { Delta } from "edit-ot-quill-delta";
 import { StdSession } from "utils/StdSession";
 
-export class Zone {
+export class Zone<ZoneStore> {
     docMap: {
         [subDocId: string]: SharedDoc
     } = {};
+
+    store: ZoneStore;
     
     ioRoom: socketio.Namespace;
 
     patchTask: NodeJS.Timeout;
 
-    constructor(ioRoom: socketio.Namespace) {
+    constructor(ioRoom: socketio.Namespace, store: ZoneStore) {
         this.ioRoom = ioRoom;
+        this.store = store
     }
 
     addSeqFor(subDocId: string, user: User, delta: Delta) {
@@ -27,7 +30,10 @@ export class Zone {
         }
     }
 
-    createSubDoc(subDocId: string, initDelta: Delta) {
+    createSubDoc(
+        subDocId: string,
+        initDelta: Delta = new Delta().insert('\n')
+    ) {
         if (this.docMap[subDocId]) {
             return this.docMap[subDocId];
         } else {

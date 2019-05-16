@@ -9,6 +9,7 @@ export * from "./SharedDoc";
 // 协作空间池
 export type ZonePool = {
     // 以自定义的 zone id 标识协助空间
+    // @ts-ignore
     [zoneId: string]: Zone
 }
 
@@ -19,18 +20,33 @@ export type FlushListener = (
 export class CoZonePool {
     pool: ZonePool = {};
 
-    createZone(
+    createZone<S>(
         zoneId: string,
-        ioRoom: socketio.Namespace
-    ): Zone {
+        ioRoom: socketio.Namespace,
+        store: S
+    ): Zone<S> {
         if (this.pool[zoneId]) {
             console.log('Zone Exists:', zoneId);
         } else {
             console.log('Zone Init:', zoneId);
-            this.pool[zoneId] = new Zone(ioRoom);
+            
+            this.pool[zoneId] = new Zone(ioRoom, store);
         }
 
         return this.pool[zoneId];
+    }
+
+    removeZone<S>(zoneId: string) {
+        const zone = this.pool[zoneId] as Zone<S>;
+
+        if (!zone) return null;
+        zone.stopTask();
+        delete this.pool[zoneId];
+
+        console.log('Remove Zone:', zoneId);
+        console.log('Now Zone Pool:', Object.keys(this.pool));
+
+        return zone;
     }
 }
 
