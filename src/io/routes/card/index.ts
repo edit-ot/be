@@ -1,32 +1,26 @@
 import * as socketio from "socket.io";
-
-// import { Delta } from "edit-ot-quill-delta";
-// import { StdSession } from "utils/StdSession";
-// import { coZonePool } from "../../CoZone";
 import { IOSessionBridge, IOLoginMiddleware } from "../../wares/IOLogin";
 import { Group } from "../../../Model/Group";
-// import { WordCard } from "./WordCard";
 import { SocketManager } from "../../utils/SocketManager";
 import { coZonePool } from "../../CoZone";
 import { WordCard } from "./WordCard";
 import { StdSession } from "utils/StdSession";
 import { Delta } from "edit-ot-quill-delta";
 
-
-
 export default (io: socketio.Server) => {
     const cardIo = io.of('/card');
 
-    io.use(IOSessionBridge);
+    cardIo.use(IOSessionBridge);
 
-    io.use(IOLoginMiddleware);
+    cardIo.use(IOLoginMiddleware);
 
     cardIo.use(IOSessionBridge);
     
     cardIo.use(IOLoginMiddleware);
 
     cardIo.use((socket, next) => {
-        const { groupId } = socket.handshake.query;
+        const groupId = socket.handshake.query.groupId;
+        const use = socket.handshake.query.use || 'card';
     
         Group.findOne({
             where: { groupId }
@@ -38,27 +32,33 @@ export default (io: socketio.Server) => {
                 // @ts-ignore
                 socket.group = g;
 
-                socket.join(g.toRoomName(), () => {
+                socket.join(g.toRoomName(use), () => {
                     next();
                 });
             }
         });
     });
 
-    cardIo.on('connect', socket => {
+    cardIo.on('connect', StdWordCardMiddleware(cardIo));
+}
+
+export function StdWordCardMiddleware(cardIo: SocketIO.Namespace) {
+    return (socket: SocketIO.Socket) => {
+        const use = socket.handshake.query.use || 'card';
+
         // @ts-ignore
         const group = socket.group as Group;
         // @ts-ignore
         const { user, userInfo } = socket.handshake.session as StdSession;
 
-        const roomName = group.toRoomName();
+        const roomName = group.toRoomName(use);
 
         const IoRoom = cardIo.to(roomName);
         
         const zone = coZonePool.createZone<WordCard>(
             roomName,
             IoRoom,
-            new WordCard(group.groupId, group.card)
+            new WordCard(group.groupId, group[use] as string, use)
         );
 
         zone.startTask();
@@ -69,9 +69,14 @@ export default (io: socketio.Server) => {
             s.emit('setWords', zone.store.toArray());
         }
 
+        const setMsg = (msg: string) => {
+            IoRoom.emit('setMsg', msg);
+        }
+
         socket.on('addWord', (word: string) => {
             zone.store.addBlankWord(word, userInfo.username);
             setWordsFor(IoRoom);
+            setMsg(`${ userInfo.username } 添加了一条名为 ${ word } 的单词`);
         });
 
         socket.on('chooseWord', wordId => {
@@ -89,45 +94,49 @@ export default (io: socketio.Server) => {
                 now: doc.now,
                 nowHash: doc.nowHash
             });
-        })
+
+            setMsg(`${ userInfo.username } 开始编辑 ${ t.word }`);
+        });
 
         socket.on('changeWordName', data => {
             const { wordId, word } = data;
-            zone.store.changeWordName(wordId, word);
+
+            const preName = zone.store.changeWordName(wordId, word);
             setWordsFor(IoRoom);
+
+            if (preName) {
+                setMsg(`${ userInfo.username } 修改了单词名: ${ preName } -> ${ word }`);
+            }
         });
 
         socket.on('login', async () => {
-            console.log('User Login', userInfo.username);
+            console.log('User Login', userInfo.username, 'Room', roomName);
             sm.setLoginedUsersFor(IoRoom);
             setWordsFor(socket);
+
+            setMsg(`欢迎 ${ userInfo.username } 进入单词卡协作`);
         });
 
         socket.on('disconnect', reasone => {
             console.log('User Disconnect', userInfo.username, reasone);
             sm.setLoginedUsersFor(IoRoom).then(users => {
                 if (users.length === 0) {
-                    console.log('No User In Card IoRoom:', roomName);
+                    console.log('No User In IoRoom:', roomName);
                     
                     zone.store.updateFromDocMap(zone.docMap);
                     zone.store.save();
 
                     coZonePool.removeZone<WordCard>(roomName);
                 }
-            })
-        });
+            });
 
+            setMsg(`${ userInfo.username } 离开了单词卡协作`);
+        });
 
         socket.on('updateContents', async data => {
-            console.log('!! updateContents', user.username);
-
+            console.log('updateContents', user.username);
             const delta = new Delta(data.delta);
             zone.addSeqFor(data.subDocId, userInfo, delta);
-            // socket.emit('finishUpdate');
         });
-
-
-
-        // socket
-    });
+    }
 }

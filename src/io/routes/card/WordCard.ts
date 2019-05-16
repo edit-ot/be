@@ -19,16 +19,18 @@ export class WordCard extends EventEmitter {
     groupId: string;
     text: string;
     map: WordMap;
+    use: string;
 
     getRandomId() {
         return Math.random().toString(36);
     }
 
-    constructor(groupId: string, initText: string) {
+    constructor(groupId: string, initText: string, use: string) {
         super();
         
         this.groupId = groupId;
         this.text = initText;
+        this.use = use;
         this.initMapFromText();
     }
 
@@ -44,7 +46,9 @@ export class WordCard extends EventEmitter {
                 );
             }
 
-            g.card = this.text;
+            // g.card = this.text;
+            g[this.use] = this.text;
+
             return g.save();
         });
     }
@@ -54,6 +58,7 @@ export class WordCard extends EventEmitter {
     }) {
         Object.keys(this.map).forEach(key => {
             const w = this.map[key];
+
             w.interpretation = docMap[key] ? 
                 docMap[key].now :
                 new Delta().insert('\n');
@@ -106,7 +111,11 @@ export class WordCard extends EventEmitter {
     changeWordName(wordId: string, newWord: string) {
         const w = this.map[wordId];
         if (!w) return;
+
+        const preName = w.word;
         w.word = newWord;
+
+        return preName;
     }
 
     getMap() {
