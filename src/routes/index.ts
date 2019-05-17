@@ -5,6 +5,7 @@ import qrRouter from "./qr";
 import groupRouter from "./group";
 import msgRouter from "./msg";
 import punchRouter from "./punch";
+import fileRouter from "./file";
 
 const router = express.Router();
 
@@ -22,6 +23,8 @@ router.use('/api/msg', msgRouter);
 router.use('/api/group', groupRouter);
 
 router.use('/api/punch', punchRouter);
+
+router.use('/api/file', fileRouter);
 
 router.get('/', (req, res, next) => {
     res.json("Hello, World");

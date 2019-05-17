@@ -70,12 +70,16 @@ export function StdWordCardMiddleware(cardIo: SocketIO.Namespace) {
         }
 
         const setMsg = (msg: string) => {
+            console.log(msg);
             IoRoom.emit('setMsg', msg);
         }
 
         socket.on('addWord', (word: string) => {
+            
+
             zone.store.addBlankWord(word, userInfo.username);
             setWordsFor(IoRoom);
+
             setMsg(`${ userInfo.username } 添加了一条名为 ${ word } 的单词`);
         });
 
@@ -114,7 +118,7 @@ export function StdWordCardMiddleware(cardIo: SocketIO.Namespace) {
             sm.setLoginedUsersFor(IoRoom);
             setWordsFor(socket);
 
-            setMsg(`欢迎 ${ userInfo.username } 进入单词卡协作`);
+            setMsg(`欢迎 ${ userInfo.username } 进入了协作`);
         });
 
         socket.on('disconnect', reasone => {
@@ -130,7 +134,7 @@ export function StdWordCardMiddleware(cardIo: SocketIO.Namespace) {
                 }
             });
 
-            setMsg(`${ userInfo.username } 离开了单词卡协作`);
+            setMsg(`${ userInfo.username } 离开了协作`);
         });
 
         socket.on('updateContents', async data => {

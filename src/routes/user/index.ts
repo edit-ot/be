@@ -220,20 +220,29 @@ router.post('/avatar', upload.single('file'), (req, res, next) => {
         file.fileId = req.file.filename;
         file.URL = url;
         file.owner = user.username;
+        file.type = req.file.mimetype;
+        file.encoding = req.file.encoding;
+        file.size = req.file.size;
+        file.fileName = req.body.fileName;
         file.save();
     });
-
-    console.log('!!!!! req.file', req.file);
 });
 
 router.post('/upload-file', upload.single('file'), (req, res, next) => {
     const { user } = req.session as StdSession;
+    
     const url = `/user-files/${ req.file.filename }`;
-
     const f = new File();
+
     f.owner = user.username;
     f.URL = url;
     f.fileId = req.file.filename;
+    f.type = req.file.mimetype;
+
+    f.encoding = req.file.encoding;
+    f.size = req.file.size;
+
+    f.fileName = req.body.fileName;
 
     f.save().then(() => {
         res.json({

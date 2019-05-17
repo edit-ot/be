@@ -97,6 +97,8 @@ export class WordCard extends EventEmitter {
     addBlankWord(word: string, creator: string) {
         const id = this.getRandomId();
         
+        if (this.map[id]) return;
+
         this.map[id] = {
             word,
             interpretation: new Delta().insert('\n'),
