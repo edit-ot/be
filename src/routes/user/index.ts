@@ -251,4 +251,26 @@ router.post('/upload-file', upload.single('file'), (req, res, next) => {
     }).catch(next);
 });
 
+router.post('/delete-file', async (req, res) => {
+    const { user } = req.session as StdSession;
+
+    const f = await File.findOne({
+        where: {
+            owner: user.username, fileId: req.body.fileId
+        }
+    });
+
+    if (f) {
+        await f.destroy();
+        res.json({
+            code: 200, msg: '文件删除成功',
+            data: f
+        });
+    } else {
+        res.json({
+            code: 404, msg: '找不到这个文件'
+        });
+    }
+});
+
 export default router;
