@@ -3,8 +3,10 @@ import { StdSession } from "utils/StdSession";
 import { Msg } from "../../../Model/Msg";
 import { SocketManager } from "../../utils/SocketManager";
 import { IOSessionBridge, IOLoginMiddleware } from "../../wares/IOLogin";
+import { IOMsg } from "./Msg";
 
-
+// @ts-ignore
+export let ioMsg: IOMsg = new IOMsg();
 
 export default (io: socketio.Server) => {
     const msgIo = io.of('/site-msg');
@@ -51,5 +53,7 @@ export default (io: socketio.Server) => {
             }
         });
     });
+
+    ioMsg.useNsRoom(msgIo);
 }
 

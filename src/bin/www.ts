@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 import * as http from "http";
+import { session } from "../before";
 import app from "../app";
 import { normalizePort } from "../utils";
 import { sequelize } from "../Model";
 import { ATTACH_IO } from "../io";
+
+console.log(session);
 
 const server = http.createServer(app);
 const port = normalizePort(process.env.PORT || '5555');

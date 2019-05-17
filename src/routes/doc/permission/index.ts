@@ -4,6 +4,7 @@ import { StdSession } from "utils/StdSession";
 import { Doc } from "../../../Model";
 import { UserDoc } from "../../../Model/UserDoc";
 import { RWDescriptorBase, RWDescriptor } from "../../../utils/RWDescriptor";
+import { ioMsg } from "../../../io/routes/msg";
 
 const router = express.Router(); 
 
@@ -123,21 +124,38 @@ router.post('/', async (req, res, next) => {
     const ud = await UserDoc.findOne({
         where: { username, docId: doc.id }
     });
-    
+
+    const { user } = req.session as StdSession;
+
     if (ud) {
         if (!set) {
             await ud.destroy();
             res.json({ code: 200, doc: doc.toStatic() });
+
+            ioMsg.sendNotification(username, {
+                text: `${ user.username } 取消了文档 ${ doc.title } 的分享`, 
+                url: `/home/docs?tab=1&activeDocId=${ doc.id }`
+            });
         } else {
             ud.permission = setString;
             await ud.save();
             res.json({ code: 200, doc: doc.toStatic() });
+
+            ioMsg.sendNotification(username, {
+                text: `${ user.username } 修改了你对文档 ${ doc.title } 的权限`,
+                url: `/home/docs?tab=1&activeDocId=${ doc.id }`
+            });
         }
     } else {
         if (set) {
             const ud = UserDoc.link(username, doc.id, setString);
             await ud.save();
             res.json({ code: 200, doc: doc.toStatic() });
+
+            ioMsg.sendNotification(username, {
+                text: `${ user.username } 分享文档 ${ doc.title } 给你`,
+                url: `/home/docs?tab=1&activeDocId=${ doc.id }`
+            });
         } else {
             res.json({ code: 200, doc: doc.toStatic() });
         }

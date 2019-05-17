@@ -1,8 +1,9 @@
 import * as socketio from "socket.io";
 import { StdSession } from "utils/StdSession";
 import * as sharedSession from "express-socket.io-session";
-import { session } from "../../app";
+
 import { User } from "../../Model";
+import { session } from "../../before";
 
 export const IOSessionBridge = sharedSession(session, {
     autoSave: true

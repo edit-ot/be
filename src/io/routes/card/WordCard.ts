@@ -22,7 +22,7 @@ export class WordCard extends EventEmitter {
     use: string;
 
     getRandomId() {
-        return Math.random().toString(36);
+        return Date.now().toString(36);
     }
 
     constructor(groupId: string, initText: string, use: string) {

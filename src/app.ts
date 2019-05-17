@@ -3,10 +3,8 @@ import * as express from "express";
 import * as path from "path";
 import * as cookieParser from "cookie-parser";
 import * as logger from "morgan";
-import * as CreateSession from "express-session";
-
 import indexRouter from "./routes/index";
-import { SECRET } from "./server-config";
+import { session } from "./before";
 // const indexRouter = require('./routes/index');
 
 // import * as sharedSession from "express-socket.io-session";
@@ -22,9 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-export const session = CreateSession({
-    secret: SECRET
-});
+
 app.use(session);
 
 app.use(express.static(path.join(__dirname, 'public')));

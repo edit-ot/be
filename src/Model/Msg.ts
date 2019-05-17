@@ -28,5 +28,19 @@ export class Msg extends Model<Msg> {
 
     @CreatedAt
     @Column
-    createAt: Date;
+    createAt: Date; 
+
+    static createNotification(
+        to: string, jsonData: any
+    ) {
+        const msg = new Msg();
+
+        msg.msgId = Date.now().toString(32);
+        msg.type = 'notification';
+        msg.to = to;
+        msg.isRead = false;
+        msg.jsonData = JSON.stringify(jsonData);
+
+        return msg;
+    }
 }
