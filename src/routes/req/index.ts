@@ -5,8 +5,6 @@ import { Msg } from "../../Model/Msg";
 import { LoginMidWare } from "../user";
 import { StdSession } from "utils/StdSession";
 import { Group } from "../../Model/Group";
-import { ioMsg } from "../../io/routes/msg";
-import { json } from "body-parser";
 
 const router = express.Router();
 
