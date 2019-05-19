@@ -6,6 +6,8 @@ import groupRouter from "./group";
 import msgRouter from "./msg";
 import punchRouter from "./punch";
 import fileRouter from "./file";
+import sysRouter from "./sys";
+import reqRouter from "./req";
 
 const router = express.Router();
 
@@ -25,6 +27,10 @@ router.use('/api/group', groupRouter);
 router.use('/api/punch', punchRouter);
 
 router.use('/api/file', fileRouter);
+
+router.use('/api/sys', sysRouter);
+
+router.use('/api/req', reqRouter);
 
 router.get('/', (req, res, next) => {
     res.json("Hello, World");

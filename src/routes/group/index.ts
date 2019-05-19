@@ -7,6 +7,7 @@ import { User, Doc } from "../../Model";
 import { RWDescriptor, RWDescriptorBase } from "../../utils/RWDescriptor";
 import { UserGroup } from "../../Model/UserGroup";
 import { DocGroup } from "../../Model/DocGroup";
+import { ioMsg } from "../../io/routes/msg";
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/byId', async (req, res) => {
-    // const { user } = req.session as StdSession;
+    const { user } = req.session as StdSession;
     const { groupId } = req.query;
 
     const groupInclude = [{
@@ -40,7 +41,9 @@ router.get('/byId', async (req, res) => {
     }]
 
     const group = await Group.findOne({
-        where: { groupId },
+        where: {
+            groupId
+        },
         include: groupInclude
     });
     
@@ -48,7 +51,12 @@ router.get('/byId', async (req, res) => {
         res.json({ code: 404 });
     } else {
         const pmap = await group.getPermissionMap();
-        res.json({ code: 200, data: Object.assign({}, group.toStatic(), { pmap }) });
+
+        if (pmap[user.username] || group.owner === user.username) {
+            res.json({ code: 200, data: Object.assign({}, group.toStatic(), { pmap }) });
+        } else {
+            res.json({ code: 403, msg: '暂无该小组的权限' });
+        }
     }
 })
 
@@ -148,12 +156,19 @@ router.post('/', (req, res) => {
     });
 });
 
-router.post('/set-permission', async (req, res) => {
+router.use('/set-permission', async (req, res) => {
     const { user } = req.session as StdSession;
-    const { groupId, username, set } = req.body;
-    
+
+    const groupId = req.body.groupId || req.query.groupId;
+    const username = req.body.username || req.query.username;
+    const set = req.body.set || req.query.set;
+
     const setString = typeof set === 'string' ?
         set : new RWDescriptor(set as RWDescriptorBase).toString();
+
+    console.log('Set Permission', {
+        groupId, username, setString, set
+    });
 
     const [group, ug] = await Promise.all([
         Group.findOne({
@@ -177,19 +192,33 @@ router.post('/set-permission', async (req, res) => {
     if (ug) {
         if (!set) {
             await ug.destroy();
-            res.json({ code: 200 });
+            res.json({ code: 200, msg: '移除权限' });
+            ioMsg.sendNotification(ug.username, {
+                text: `你已被移出小组 ${ group.groupName }`, 
+                url: `/home/group/${ group.groupId }`
+            });
         } else {
             ug.permission = setString;
             await ug.save();
-            res.json({ code: 200 });
+            res.json({ code: 200, msg: '已设置权限为' + setString });
+
+            ioMsg.sendNotification(ug.username, {
+                text: `你在小组 ${ group.groupName } 中的权限被设置为 ` + setString, 
+                url: `/home/group/${ group.groupId }`
+            });
         }
     } else {
         if (set) {
             const newUg = UserGroup.link(username, groupId, setString);
             await newUg.save();
-            res.json({ code: 200 });
+            res.json({ code: 200, msg: '已分配权限' });
+
+            ioMsg.sendNotification(newUg.username, {
+                text: `你已被拉进小组 ${ group.groupName }, 权限为 ` + setString, 
+                url: `/home/group/${ group.groupId }`
+            });
         } else {
-            res.json({ code: 200 });
+            res.json({ code: 200, msg: '这种情况没有意义' });
         }
     }
 })

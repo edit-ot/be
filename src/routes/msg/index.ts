@@ -10,14 +10,12 @@ export default router;
 router.use('*', LoginMidWare);
 
 
-router.get('/notification', async (req, res) => {
+router.get('/', async (req, res) => {
     const { user } = req.session as StdSession;
 
     const msgs = await Msg.findAll({
-        where: {
-            to: user.username, 
-            type: 'notification'
-        }
+        where: { to: user.username },
+        order: [['createAt', 'DESC']]
     });
 
     res.json({
@@ -25,6 +23,28 @@ router.get('/notification', async (req, res) => {
         data: msgs
     });
 });
+
+router.post('/remove', async (req, res) => {
+    const { user } = req.session as StdSession;
+    const { msgId } = req.body;
+
+    const msg = await Msg.findOne({
+        where: { msgId, to: user.username }
+    });
+
+    if (msg) {
+        await msg.destroy();
+
+        res.json({
+            code: 200
+        });
+    } else {
+        res.json({
+            code: 404
+        });
+    }
+});
+
 
 router.post('/has-been-read', async (req, res) => {
     const { user } = req.session as StdSession;
