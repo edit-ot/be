@@ -6,6 +6,7 @@ import { Sequelize } from "sequelize-typescript";
 import { FILES_BASE } from "../../config";
 import { File } from "../../Model/File";
 import { Group } from "../../Model/Group";
+import { UserUser } from "../../Model/UserUser";
 
 // import * as md5 from "md5";
 
@@ -270,6 +271,65 @@ router.post('/delete-file', async (req, res) => {
         res.json({
             code: 404, msg: '找不到这个文件'
         });
+    }
+});
+
+router.get('/followers', (req, res, next) => {
+    UserUser.getUserFollowers(req.query.username).then(users => {
+        res.json({
+            code: 200, data: users
+        });
+    }).catch(next);
+});
+
+router.get('/followings', (req, res, next) => {
+    UserUser.getUserFollowings(req.query.username).then(users => {
+        res.json({
+            code: 200, data: users
+        });
+    }).catch(next);
+});
+
+// router.get('/my-follow-ers-ings', async (req, res, next) => {
+//     const { user } = req.session as StdSession;
+
+//     const [followers, followings] = await Promise.all([
+//         UserUser.getUserFollowers(user.username),
+//         UserUser.getUserFollowings(user.username)
+//     ]);
+
+//     res.json({
+//         code: 200,
+//         data: { followers, followings }
+//     });
+// });
+
+router.post('/follow-one', async (req, res, next) => {
+    const { user } = req.session as StdSession;
+    const { username } = req.body;
+
+    const uu = UserUser.followOne(user.username, username);
+
+    try {
+        await uu.save();
+        res.json({
+            code: 200, msg: 'followed'
+        })
+    } catch (err) {
+        const uu2 = await UserUser.findOne({
+            where: { from: user.username, to: username }
+        });
+
+        if (uu2) {
+            await uu2.destroy();
+            // 说明是重复导致的 ERR
+            res.json({
+                code: 200, msg: 'removed'
+            });
+        } else {
+            console.log('/user/follow-one ERROR', err);
+            next(err);
+        }
     }
 });
 

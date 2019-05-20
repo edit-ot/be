@@ -65,19 +65,19 @@ router.post('/group-permission-req', async (req, res) => {
     
             resUrl: `/api/group/set-permission?groupId=${groupId}&username=${user.username}&set=r`,
             resMsg: Msg.createNotification(user.username, {
-                text: `你先前想加入小组${ group.groupName }的申请已经通过`,
+                text: `你先前想加入小组 ${ group.groupName } 的申请已经通过`,
                 url: `/home/group/${ group.groupId }`
             }),
     
             rejUrl: ``,
             rejMsg: Msg.createNotification(user.username, {
-                text: `小组${ group.groupName }拒绝了你的权限申请`,
+                text: `小组 ${ group.groupName } 拒绝了你的权限申请`,
                 url: `/home/group/${ group.groupId }`
             })
         }
     );
 
-    msg.content = `${user.username }想申请加入小组${ group.groupName }`;
+    msg.content = `${user.username } 申请加入小组 ${ group.groupName }`;
 
     await msg.save();
 

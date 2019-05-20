@@ -9,6 +9,7 @@ import { UserPunch } from './UserPunch';
 import { DB_CONFIG } from '../config';
 import { UserDoc } from './UserDoc';
 import { Msg } from './Msg';
+import { UserUser } from "./UserUser";
 
 export const sequelize = new Sequelize(DB_CONFIG);
 
@@ -21,6 +22,7 @@ sequelize.addModels([
     UserGroup,
     File,
     
+    UserUser,
     Msg,
     UserPunch
 ]);
