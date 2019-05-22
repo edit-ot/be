@@ -106,6 +106,10 @@ export default (io: socketio.Server) => {
                 }
             })
         });
+
+        socket.on('ChangePermissionPopup Popped', () => {
+            docIo.emit('ChangePermissionPopup Popped');
+        });
     
         // Change Line 
         socket.on('change-line', data => {
