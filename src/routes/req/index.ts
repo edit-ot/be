@@ -5,6 +5,7 @@ import { Msg } from "../../Model/Msg";
 import { LoginMidWare } from "../user";
 import { StdSession } from "utils/StdSession";
 import { Group } from "../../Model/Group";
+import { Doc } from "../../Model";
 
 const router = express.Router();
 
@@ -86,6 +87,71 @@ router.post('/group-permission-req', async (req, res) => {
     });
     
 });
+
+
+
+router.post('/doc-permission-req', async (req, res) => {
+    const { user } = req.session as StdSession;
+    const { docId } = req.body;
+    const wantRW = req.body.wantRW || 'r';
+
+    const doc = await Doc.findOne({ where: { id: +docId || -1 } });
+
+    if (!doc) {
+        return res.json({ code: 404, msg: '该文档不存在' })
+    }
+
+    const reqId = `${user.username}-dp-${doc.id}`;
+
+    const $ = await Msg.findReq(reqId)
+
+    if ($) {
+        const [$msg, reqBody] = $;
+
+        if (reqBody.state === 'pendding') {
+            return res.json({
+                code: 201, msg: '先前已提交过该文档的权限申请'
+            });
+        } else {
+            const $oldMsg = Msg.fromStaticObj({
+                ...$msg.toStatic(), 
+                msgId: $msg + '-' + Date.now()
+            });
+            
+            await $msg.destroy();
+            await $oldMsg.save();
+        }
+    }
+    
+    const msg = Msg.createReq(
+        reqId, doc.owner,
+        {
+            state: 'pendding',
+    
+            resUrl: `/api/doc/permission/set?docId=${doc.id}&username=${user.username}&set=${ wantRW }`,
+            resMsg: Msg.createNotification(user.username, {
+                text: `你先前想获得的文档权限申请已经通过`,
+                url: `/edit/${ doc.id }`
+            }),
+    
+            rejUrl: ``,
+            rejMsg: Msg.createNotification(user.username, {
+                text: `文档所有者 ${ doc.owner } 拒绝了你的文档权限申请`,
+                url: `/edit/${ doc.id }`
+            })
+        }
+    );
+
+    msg.content = `${user.username } 申请文档 ${ doc.title } 的权限, Ta 想要的权限为: ${ wantRW }`;
+
+    await msg.save();
+
+    return res.json({
+        code: 200, data: msg
+    });
+});
+
+
 
 router.post('/resolve', async (req, res) => {
     const { reqId } = req.body;

@@ -48,6 +48,9 @@ export class Zone<ZoneStore> {
     }
 
     startTask() {
+        if (this.patchTask) {
+            return;
+        }
         this.patchTask = setInterval(() => {
             this.tick();
         }, 3000);

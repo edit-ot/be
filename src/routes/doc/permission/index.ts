@@ -105,11 +105,20 @@ router.get('/', async (req, res, next) => {
     });
 });
 
-// ENNN
-router.post('/', async (req, res, next) => {
-    const { username } = req.body;
-    const doc = req.body.doc as Doc;
-    const set = (req.body.set || '') as string | RWDescriptorBase;
+const DocSetPerm: express.RequestHandler = async (req, res, next) => {
+    const username = req.body.username || req.query.username;
+    const doc = (req.body.doc as Doc) || (
+        await Doc.findOne({ where: { id: +req.query.docId} })
+    );
+
+    const set = (req.body.set || req.query.set || '') as string | RWDescriptorBase;
+
+    if (!doc) {
+        res.json({
+            code: 404, msg: '找不到 doc'
+        })
+        return;
+    }
 
     const setString = typeof set === 'string' ?
         set : new RWDescriptor(set).toString();
@@ -160,7 +169,11 @@ router.post('/', async (req, res, next) => {
             res.json({ code: 200, doc: doc.toStatic() });
         }
     }
-});
+}
+
+router.post('/', DocSetPerm);
+
+router.use('/set', DocSetPerm);
 
 export default router;
 

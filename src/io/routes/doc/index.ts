@@ -4,6 +4,7 @@ import { Delta } from "edit-ot-quill-delta";
 import { StdSession } from "utils/StdSession";
 import { coZonePool, UserComment } from "../../CoZone";
 import { IOSessionBridge, IOLoginMiddleware } from "../../wares/IOLogin";
+import * as JSONStringify from "fast-json-stable-stringify"
 
 export default (io: socketio.Server) => {
     const docIo = io.of('/doc');
@@ -41,6 +42,8 @@ export default (io: socketio.Server) => {
         const docRoomName = doc.toRoomName();
         const subDocId = '1';
         const docIoRoom = docIo.to(docRoomName);
+
+        console.log('DocIo On Connect:', userInfo.username);
         
         const zone = coZonePool.createZone(docRoomName, docIoRoom, {});
 
@@ -69,6 +72,8 @@ export default (io: socketio.Server) => {
             const sharedDoc = zone.findSubDoc(subDocId);
 
             socket.on('i-login', () => {
+                console.log('when i-login', userInfo.username);
+
                 socket.emit('i-logined', {
                     userInfo, users: __users__, 
                     contentHash: doc.contentHash(),
@@ -87,6 +92,19 @@ export default (io: socketio.Server) => {
         socket.on('disconnect', reasone => {
             console.log('User Disconnect', userInfo.username, reasone);
             docIo.emit('others-exit', userInfo);
+
+            docIoRoom.clients((err: any, list: string[]) => {
+                console.log('exist', list.length);
+                if (list.length === 0) {
+                    console.log('保存');
+
+                    const sharedDoc = zone.findSubDoc(subDocId);
+                    zone.tick();
+                    const str = JSONStringify(sharedDoc.now);
+                    doc.content = str;
+                    doc.save();
+                }
+            })
         });
     
         // Change Line 
