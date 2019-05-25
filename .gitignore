@@ -63,3 +63,4 @@ typings/
 # my ignore files
 package-lock.json
 dist/
+.VSCodeCounter/
